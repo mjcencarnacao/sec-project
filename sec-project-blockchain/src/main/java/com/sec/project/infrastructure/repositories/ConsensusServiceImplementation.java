@@ -1,66 +1,75 @@
 package com.sec.project.infrastructure.repositories;
 
-import com.sec.project.domain.models.enums.SendingMethod;
 import com.sec.project.domain.models.records.Message;
-import com.sec.project.domain.models.records.Node;
 import com.sec.project.domain.repositories.ConsensusService;
-import com.sec.project.interfaces.CommandLineInterface;
-import com.sec.project.utils.NetworkExchangeUtils;
+import com.sec.project.domain.usecases.SendCommitMessageUseCase;
+import com.sec.project.domain.usecases.SendPrePrepareMessageUseCase;
+import com.sec.project.domain.usecases.SendPrepareMessageUseCase;
+import com.sec.project.utils.NetworkUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 
-import static com.sec.project.utils.Constants.ROUND_TIMEOUT;
+import static com.sec.project.domain.models.enums.MessageType.*;
 
 @Service
 public class ConsensusServiceImplementation implements ConsensusService {
 
     private long round = 1;
-    private final Node self;
-    List<Message> transactions = new LinkedList<>();
-    private final NetworkExchangeUtils<Message> networkExchangeUtils;
-    private final Logger logger = LoggerFactory.getLogger(CommandLineInterface.class);
+    private final NetworkUtils<Message> networkUtils;
+    private final SendCommitMessageUseCase sendCommitMessageUseCase;
+    private final SendPrepareMessageUseCase sendPrepareMessageUseCase;
+    private final SendPrePrepareMessageUseCase sendPrePrepareMessageUseCase;
+    private final Logger logger = LoggerFactory.getLogger(ConsensusServiceImplementation.class);
 
-    public ConsensusServiceImplementation(Node self, NetworkExchangeUtils<Message> networkExchangeUtils) {
-        this.self = self;
-        this.networkExchangeUtils = networkExchangeUtils;
+    @Autowired
+    public ConsensusServiceImplementation(SendCommitMessageUseCase sendCommitMessageUseCase, SendPrepareMessageUseCase sendPrepareMessageUseCase, SendPrePrepareMessageUseCase sendPrePrepareMessageUseCase, NetworkUtils<Message> networkUtils) {
+        this.networkUtils = networkUtils;
+        this.sendCommitMessageUseCase = sendCommitMessageUseCase;
+        this.sendPrepareMessageUseCase = sendPrepareMessageUseCase;
+        this.sendPrePrepareMessageUseCase = sendPrePrepareMessageUseCase;
     }
 
     @Override
-    @Scheduled(fixedRate = ROUND_TIMEOUT)
-    public void start(Message message) {
-        if (self.role().isLeader())
-            networkExchangeUtils.sendMessage(message, SendingMethod.BROADCAST, Optional.empty());
-        logger.info(String.format("Starting new Consensus round with id: %d", round++));
+    public void start() throws ExecutionException, InterruptedException {
+        handleMessageTypes(networkUtils.receiveResponse());
+        round++;
     }
 
     @Override
-    public void decide(Message message) {
-        transactions.add(message);
-        logger.info(String.format("Added message: %s to the blockchain.", message.value()));
+    public void sendCommitMessage(Message received) {
+        Message message = new Message(COMMIT, received.id(), round, received.value());
+        sendCommitMessageUseCase.execute(message);
     }
 
     @Override
-    public void sendCommitMessage(Message message) {
-        networkExchangeUtils.sendMessage(message, SendingMethod.BROADCAST, Optional.empty());
-        logger.info(String.format("Sent Commit message with value: %s", message.value()));
-        decide(message);
+    public void sendPrepareMessage(Message received) {
+        Message message = new Message(PREPARE, received.id(), round, received.value());
+        sendPrepareMessageUseCase.execute(message);
+        handleMessageTypes(networkUtils.receiveResponse());
     }
 
     @Override
-    public void sendPrepareMessage(Message message) {
-        networkExchangeUtils.sendMessage(message, SendingMethod.BROADCAST, Optional.empty());
-        logger.info(String.format("Sent Prepare message with value: %s", message.value()));
+    public void sendPrePrepareMessage(Message received) {
+        Message message = new Message(PRE_PREPARE, received.id(), round, received.value());
+        sendPrePrepareMessageUseCase.execute(message);
+        handleMessageTypes(networkUtils.receiveResponse());
     }
 
     @Override
-    public void sendPrePrepareMessage(Message message) {
-        logger.info(String.format("Sent Pre-Prepare message with value: %s", message.value()));
+    public void decide() {
+
     }
 
+    private void handleMessageTypes(Message message) {
+        switch (message.type()) {
+            case PRE_PREPARE -> sendPrepareMessage(message);
+            case PREPARE -> sendCommitMessage(message);
+            case COMMIT -> decide();
+            default -> sendPrePrepareMessage(message);
+        }
+    }
 }

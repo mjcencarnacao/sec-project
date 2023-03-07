@@ -6,7 +6,7 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 
 public record Connection(InetAddress address, DatagramSocket datagramSocket) {
-    public Connection() throws UnknownHostException, SocketException {
-        this(InetAddress.getLocalHost(), new DatagramSocket());
+    public Connection(int port) throws UnknownHostException, SocketException {
+        this(InetAddress.getLocalHost(), new DatagramSocket(port));
     }
 }

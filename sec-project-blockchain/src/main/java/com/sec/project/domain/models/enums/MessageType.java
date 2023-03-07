@@ -1,4 +1,5 @@
 package com.sec.project.domain.models.enums;
 
-public interface MessageType {
+public enum MessageType {
+    CLIENT_REQUEST, PRE_PREPARE, PREPARE, COMMIT, ROUND_CHANGE
 }

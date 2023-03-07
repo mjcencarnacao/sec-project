@@ -18,6 +18,6 @@ public class StaticNodeConfiguration {
     /**
      * Static Ports for different nodes.
      */
-    public final List<Integer> ports = Arrays.asList(4001, 4002, 4003, 4004);
+    public final List<Integer> ports = Arrays.asList(4001, 4002, 4003);
 
 }

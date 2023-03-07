@@ -6,4 +6,8 @@ public enum Role {
     public boolean isLeader() {
         return this == LEADER;
     }
+
+    public boolean isMember() {
+        return this == MEMBER;
+    }
 }

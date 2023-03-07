@@ -11,19 +11,19 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 @Service
-public class SendCommitMessageUseCase implements UseCase {
+public class SendRoundChangeUseCase implements UseCase {
 
     private final NetworkUtils<Message> networkUtils;
     private final Logger logger = LoggerFactory.getLogger(SendPrepareMessageUseCase.class);
 
     @Autowired
-    public SendCommitMessageUseCase(NetworkUtils<Message> networkUtils) {
+    public SendRoundChangeUseCase(NetworkUtils<Message> networkUtils) {
         this.networkUtils = networkUtils;
     }
 
     @Override
     public void execute(Message message) {
         networkUtils.sendMessage(message, SendingMethod.BROADCAST, Optional.empty());
-        logger.info(String.format("Member sent a Commit for message with ID: %d", message.id()));
+        logger.info(String.format("Member sent a Round Change for message with ID: %d", message.id()));
     }
 }

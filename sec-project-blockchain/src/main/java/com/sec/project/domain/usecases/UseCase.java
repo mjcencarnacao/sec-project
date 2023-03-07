@@ -1,8 +1,13 @@
 package com.sec.project.domain.usecases;
 
-import org.springframework.stereotype.Service;
+import com.sec.project.domain.models.records.Message;
+import com.sec.project.utils.NetworkUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 
-@Service
+import java.util.concurrent.ExecutionException;
+
 public interface UseCase {
-    void execute();
+    @Autowired
+    NetworkUtils<Message> utils = null;
+    void execute(Message message) throws ExecutionException, InterruptedException;
 }
