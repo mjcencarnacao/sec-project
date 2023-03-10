@@ -13,10 +13,13 @@ import java.util.logging.Logger;
 @ShellComponent
 public class CommandLineInterface {
 
-    @Autowired
-    private SendMessageUseCase sendMessageUseCase;
+    private final SendMessageUseCase sendMessageUseCase;
+    private final Logger logger = Logger.getLogger(CommandLineInterface.class.getName());
 
-    Logger logger = Logger.getLogger(CommandLineInterface.class.getName());
+    @Autowired
+    public CommandLineInterface(SendMessageUseCase sendMessageUseCase) {
+        this.sendMessageUseCase = sendMessageUseCase;
+    }
 
     @ShellMethod("Append a message to the blockchain.")
     public void append(@ShellOption(value = "-s", defaultValue = "") String message) throws IOException {
