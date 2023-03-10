@@ -11,6 +11,11 @@ import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
+/**
+ * Use case describing the behaviour to send a prepared message by invoking the NetworkUtils logic.
+ *
+ * @see NetworkUtils
+ */
 @Service
 public class SendPrepareMessageUseCase implements UseCase {
 

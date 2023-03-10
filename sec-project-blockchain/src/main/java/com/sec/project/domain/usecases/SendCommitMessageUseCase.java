@@ -11,6 +11,11 @@ import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
+/**
+ * Use case describing the behaviour on how a commit message should be sent by invoking the NetworkUtils logic.
+ *
+ * @see NetworkUtils
+ */
 @Service
 public class SendCommitMessageUseCase implements UseCase {
 

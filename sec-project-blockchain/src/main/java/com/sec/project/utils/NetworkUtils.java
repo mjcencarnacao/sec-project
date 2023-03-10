@@ -18,6 +18,12 @@ import java.util.Optional;
 import static com.sec.project.interfaces.CommandLineInterface.self;
 import static com.sec.project.utils.Constants.MAX_BUFFER_SIZE;
 
+/**
+ * NetworkUtils class that implements logic for handling the UDP service, allowing delivery and reception of messages.
+ *
+ * @param <T> Generic class, allowing this service to be used by different kinds of types. Different objects can be sent
+ *            using the component.
+ */
 @Component
 public class NetworkUtils<T> {
 
@@ -31,6 +37,14 @@ public class NetworkUtils<T> {
         this.staticNodeConfiguration = staticNodeConfiguration;
     }
 
+    /**
+     * Method that allows for a generic object to be converted to bytes and sent given a specific sending method.
+     *
+     * @param object        generic object to be sent.
+     * @param sendingMethod sending method that can either be a UNICAST or a BROADCAST.
+     * @param receiver      optional parameter specifying the receiver if the sending method is a UNICAST.
+     * @throws IllegalArgumentException for unknown sending methods.
+     */
     public void sendMessage(T object, SendingMethod sendingMethod, Optional<Integer> receiver) {
         byte[] bytes = gson.toJson(object).getBytes();
         switch (sendingMethod) {
@@ -40,6 +54,13 @@ public class NetworkUtils<T> {
         }
     }
 
+    /**
+     * Method that handles logic for receiving responses from remote nodes.
+     *
+     * @param objectClass required to allow the recovery of the original object type.
+     * @return the Object, of which the class is passed as an argument.
+     * @throws RuntimeException in case of any Input/Output errors.
+     */
     public T receiveResponse(Class<T> objectClass) {
         byte[] buffer = new byte[MAX_BUFFER_SIZE];
         try {
@@ -53,6 +74,12 @@ public class NetworkUtils<T> {
         }
     }
 
+    /**
+     * Method that handles a quorum of responses for a specified class.
+     *
+     * @param objectClass required to allow the recovery of the original object type.
+     * @return the Object, of which the class is passed as an argument.
+     */
     public List<T> receiveQuorumResponse(Class<T> objectClass) {
         List<T> responses = new ArrayList<>();
         while (responses.size() != staticNodeConfiguration.getQuorum())
@@ -60,6 +87,12 @@ public class NetworkUtils<T> {
         return responses;
     }
 
+    /**
+     * Method that handles logic to send a datagram packet via UDP.
+     *
+     * @param bytes buffer containing the bytes of the message to be sent.
+     * @param port  destination port of the remote node.
+     */
     private void createPacketForDelivery(byte[] bytes, int port) {
         try {
             DatagramSocket socket = self.getConnection().datagramSocket();
