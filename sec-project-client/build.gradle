@@ -17,6 +17,7 @@ ext {
 }
 
 dependencies {
+    implementation 'com.google.code.gson:gson:2.10.1'
     implementation 'org.springframework.shell:spring-shell-starter'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

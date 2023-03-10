@@ -10,7 +10,7 @@ public class Constants {
     /**
      * MessagingServiceImplementation Constants
      */
-    public static final int MAX_BUFFER_SIZE = 60000;
+    public static final int MAX_BUFFER_SIZE = 999999999;
 
     /**
      * FileSystemConfiguration Constants
