@@ -18,6 +18,14 @@ public class StaticNodeConfiguration {
     /**
      * Static Ports for different nodes.
      */
-    public final List<Integer> ports = Arrays.asList(4001, 4002, 4003);
+    public final List<Integer> ports = Arrays.asList(4000, 4001, 4002, 4003);
+
+    /**
+     * Assuming we have One faulty node (Byzantine).
+     * 2 * 1 + 1 = 3
+     */
+    public final int getQuorum() {
+        return 3;
+    }
 
 }

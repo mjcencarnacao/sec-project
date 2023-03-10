@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 
 import static com.sec.project.utils.Constants.MAX_BUFFER_SIZE;
 
@@ -28,6 +29,7 @@ public class NetworkUtils<T> {
 
     public void sendMessage(T object) {
         byte[] bytes = gson.toJson(object).getBytes();
+        System.out.println(gson.toJson(object));
         staticNodeConfiguration.ports.forEach(port -> deliverPacket(bytes, port));
     }
 
@@ -43,8 +45,9 @@ public class NetworkUtils<T> {
     }
 
     private void deliverPacket(byte[] bytes, int port) {
-        try (DatagramSocket socket = connection.datagramSocket()) {
-            socket.send(new DatagramPacket(bytes, bytes.length, socket.getInetAddress(), port));
+        try {
+            DatagramSocket socket = connection.datagramSocket();
+            socket.send(new DatagramPacket(bytes, bytes.length, InetAddress.getLocalHost(), port));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

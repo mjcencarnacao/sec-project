@@ -11,10 +11,12 @@ public class Constants {
     /**
      * MessagingServiceImplementation Constants
      */
-    public static final int MAX_BUFFER_SIZE = 60000;
+    public static final int MAX_BUFFER_SIZE = 4096;
 
     /**
      * Round Timeout Value.
      */
     public static final int ROUND_TIMEOUT = 5000;
+
+    public static final String BYZANTINE_RANDOM_STRING = "RANDOM_STRING";
 }

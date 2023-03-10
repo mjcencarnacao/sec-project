@@ -11,8 +11,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.concurrent.ExecutionException;
-
 import static com.sec.project.domain.models.enums.MessageType.*;
 
 @Service
@@ -49,14 +47,14 @@ public class ConsensusServiceImplementation implements ConsensusService {
     public void sendPrepareMessage(Message received) {
         Message message = new Message(PREPARE, received.id(), round, received.value());
         sendPrepareMessageUseCase.execute(message);
-        handleMessageTypes(networkUtils.receiveResponse(Message.class));
+        handleMessageTypes(networkUtils.receiveQuorumResponse(Message.class).get(0));
     }
 
     @Override
     public void sendPrePrepareMessage(Message received) {
         Message message = new Message(PRE_PREPARE, received.id(), round, received.value());
         sendPrePrepareMessageUseCase.execute(message);
-        handleMessageTypes(networkUtils.receiveResponse(Message.class));
+        handleMessageTypes(networkUtils.receiveQuorumResponse(Message.class).get(0));
     }
 
     @Override
@@ -65,6 +63,7 @@ public class ConsensusServiceImplementation implements ConsensusService {
     }
 
     private void handleMessageTypes(Message message) {
+        if (message.type() == null) message = new Message(PRE_PREPARE, message.timestamp(), round, message.value());
         switch (message.type()) {
             case PRE_PREPARE -> sendPrepareMessage(message);
             case PREPARE -> sendCommitMessage(message);
