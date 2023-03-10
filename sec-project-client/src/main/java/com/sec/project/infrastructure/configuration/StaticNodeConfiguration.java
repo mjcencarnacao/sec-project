@@ -6,18 +6,14 @@ import org.springframework.stereotype.Component;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Component that holds the static configuration allowed in the project.
+ */
 @Component
 @ConfigurationProperties("app.nodes")
 public class StaticNodeConfiguration {
-
     /**
-     * Static IP address for all nodes.
-     */
-    private final String address = "localhost";
-
-    /**
-     * Static Ports for different nodes.
+     * Static Port List for different nodes available on the blockchain service.
      */
     public final List<Integer> ports = Arrays.asList(4000, 4001, 4002, 4003);
-
 }
