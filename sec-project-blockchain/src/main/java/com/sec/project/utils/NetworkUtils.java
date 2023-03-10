@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static com.sec.project.interfaces.CommandLineInterface.self;
@@ -40,17 +42,27 @@ public class NetworkUtils<T> {
 
     public T receiveResponse(Class<T> objectClass) {
         byte[] buffer = new byte[MAX_BUFFER_SIZE];
-        try (DatagramSocket socket = self.getConnection().datagramSocket()) {
+        try {
+            DatagramSocket socket = self.getConnection().datagramSocket();
             DatagramPacket dataReceived = new DatagramPacket(buffer, buffer.length);
             socket.receive(dataReceived);
-            return gson.fromJson(new String(buffer), objectClass);
+            System.out.println(gson.fromJson(new String(buffer).trim(), objectClass));
+            return gson.fromJson(new String(buffer).trim(), objectClass);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
+    public List<T> receiveQuorumResponse(Class<T> objectClass) {
+        List<T> responses = new ArrayList<>();
+        while (responses.size() != staticNodeConfiguration.getQuorum())
+            responses.add(receiveResponse(objectClass));
+        return responses;
+    }
+
     private void createPacketForDelivery(byte[] bytes, int port) {
-        try (DatagramSocket socket = self.getConnection().datagramSocket()) {
+        try {
+            DatagramSocket socket = self.getConnection().datagramSocket();
             DatagramPacket packet = new DatagramPacket(bytes, bytes.length, self.getConnection().address(), port);
             socket.send(packet);
         } catch (IOException e) {

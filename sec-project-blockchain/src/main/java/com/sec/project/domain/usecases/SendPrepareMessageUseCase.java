@@ -2,6 +2,7 @@ package com.sec.project.domain.usecases;
 
 import com.sec.project.domain.models.enums.SendingMethod;
 import com.sec.project.domain.models.records.Message;
+import com.sec.project.infrastructure.annotations.Byzantine;
 import com.sec.project.utils.NetworkUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +23,7 @@ public class SendPrepareMessageUseCase implements UseCase {
     }
 
     @Override
+    @Byzantine
     public void execute(Message message) {
         networkUtils.sendMessage(message, SendingMethod.BROADCAST, Optional.empty());
         logger.info(String.format("Member sent a Prepare for message with ID: %d", message.id()));

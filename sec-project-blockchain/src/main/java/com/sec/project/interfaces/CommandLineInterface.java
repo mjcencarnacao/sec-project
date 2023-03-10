@@ -35,8 +35,8 @@ public class CommandLineInterface {
 
     @ShellMethod("Start the Consensus service.")
     public void start() throws ExecutionException, InterruptedException {
-        consensusService.start();
         logger.info("Started IBFT protocol.");
+        consensusService.start();
     }
 
     @ShellMethod("Exit the application.")
