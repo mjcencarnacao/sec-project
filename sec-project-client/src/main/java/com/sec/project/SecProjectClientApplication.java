@@ -5,6 +5,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.annotation.EnableAsync;
 
+/**
+ * Main project file, that provides the proper execution and application context.
+ */
 @SpringBootApplication
 @EnableAsync
 public class SecProjectClientApplication {
