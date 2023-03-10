@@ -1,6 +1,5 @@
-package com.sec.project.domain.models.valueobjects;
+package com.sec.project.domain.models.records;
 
-import com.sec.project.domain.models.records.Message;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedList;

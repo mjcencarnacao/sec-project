@@ -20,7 +20,7 @@ public class CommandLineInterface {
 
     public static Node self;
     private final ConsensusService consensusService;
-    Logger logger = LoggerFactory.getLogger(CommandLineInterface.class);
+    private final Logger logger = LoggerFactory.getLogger(CommandLineInterface.class);
 
     @Autowired
     public CommandLineInterface(ConsensusService consensusService) {

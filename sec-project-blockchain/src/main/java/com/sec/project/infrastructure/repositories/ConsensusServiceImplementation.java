@@ -34,8 +34,8 @@ public class ConsensusServiceImplementation implements ConsensusService {
     }
 
     @Override
-    public void start() throws ExecutionException, InterruptedException {
-        handleMessageTypes(networkUtils.receiveResponse());
+    public void start() {
+        handleMessageTypes(networkUtils.receiveResponse(Message.class));
         round++;
     }
 
@@ -49,14 +49,14 @@ public class ConsensusServiceImplementation implements ConsensusService {
     public void sendPrepareMessage(Message received) {
         Message message = new Message(PREPARE, received.id(), round, received.value());
         sendPrepareMessageUseCase.execute(message);
-        handleMessageTypes(networkUtils.receiveResponse());
+        handleMessageTypes(networkUtils.receiveResponse(Message.class));
     }
 
     @Override
     public void sendPrePrepareMessage(Message received) {
         Message message = new Message(PRE_PREPARE, received.id(), round, received.value());
         sendPrePrepareMessageUseCase.execute(message);
-        handleMessageTypes(networkUtils.receiveResponse());
+        handleMessageTypes(networkUtils.receiveResponse(Message.class));
     }
 
     @Override

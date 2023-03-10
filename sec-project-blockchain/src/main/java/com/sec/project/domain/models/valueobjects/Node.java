@@ -3,11 +3,9 @@ package com.sec.project.domain.models.valueobjects;
 import com.sec.project.domain.models.enums.Mode;
 import com.sec.project.domain.models.enums.Role;
 import com.sec.project.domain.models.records.Connection;
-import com.sec.project.domain.models.records.Message;
 
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.util.PriorityQueue;
 import java.util.UUID;
 
 public class Node {
@@ -16,7 +14,6 @@ public class Node {
     private Mode mode;
     private final Connection connection;
     private final UUID uuid = UUID.randomUUID();
-    public final PriorityQueue<Message> queue = new PriorityQueue<>();
 
     public Node(int port, Role role, Mode mode) throws SocketException, UnknownHostException {
         this.role = role;
