@@ -18,5 +18,8 @@ public class Constants {
      */
     public static final int ROUND_TIMEOUT = 5000;
 
+    /**
+     * Byzantine string.
+     */
     public static final String BYZANTINE_RANDOM_STRING = "RANDOM_STRING";
 }

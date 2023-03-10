@@ -6,6 +6,9 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+/**
+ * Main project file, that provides the proper execution and application context.
+ */
 @EnableScheduling
 @SpringBootApplication
 @EnableConfigurationProperties

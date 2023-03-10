@@ -1,5 +1,8 @@
 package com.sec.project.domain.models.enums;
 
+/**
+ * Different roles that a given node can assume.
+ */
 public enum Role {
 
     LEADER, MEMBER;

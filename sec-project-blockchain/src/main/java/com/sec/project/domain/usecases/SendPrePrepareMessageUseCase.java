@@ -13,6 +13,12 @@ import java.util.Optional;
 
 import static com.sec.project.interfaces.CommandLineInterface.self;
 
+/**
+ * Use case describing the behaviour to send a pre-prepared message by invoking the NetworkUtils logic.
+ * Only a node that is a Leader can perform this operation.
+ *
+ * @see NetworkUtils
+ */
 @Service
 public class SendPrePrepareMessageUseCase implements UseCase {
 

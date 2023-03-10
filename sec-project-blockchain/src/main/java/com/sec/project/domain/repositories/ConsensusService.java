@@ -5,6 +5,11 @@ import org.springframework.stereotype.Service;
 
 import java.util.concurrent.ExecutionException;
 
+/**
+ * Contract for the ConsensusServiceImplementation where the IBFT message exchange will take place.
+ *
+ * @see com.sec.project.infrastructure.repositories.ConsensusServiceImplementation
+ */
 @Service
 public interface ConsensusService {
 
