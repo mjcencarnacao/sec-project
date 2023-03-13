@@ -27,12 +27,4 @@ public class StaticNodeConfiguration {
         return 3;
     }
 
-    /**
-     * Assuming we have One faulty node (Byzantine).
-     * 2 * 1 + 1 = 3
-     */
-    public final int getQuorum() {
-        return 3;
-    }
-
 }
