@@ -21,13 +21,19 @@ public class SecurityConfiguration<T> {
     private final KeyPair keyPair;
 
     /**
+     * Conversion Utils to get the byte array from a generic object.
+     */
+    private final ConversionUtils<T> conversionUtils;
+
+    /**
      * Initializes the key pair defined above using the RSA algorithm, which is defined in the Constants.java file.
      *
      * @throws NoSuchAlgorithmException In case an invalid asymmetric algorithm is added to the ALGORITHM constant.
      * @see com.sec.project.utils.Constants
      */
     @Autowired
-    public SecurityConfiguration() throws NoSuchAlgorithmException {
+    public SecurityConfiguration(ConversionUtils<T> conversionUtils) throws NoSuchAlgorithmException {
+        this.conversionUtils = conversionUtils;
         KeyPairGenerator generator = KeyPairGenerator.getInstance(ALGORITHM);
         generator.initialize(KEY_SIZE);
         this.keyPair = generator.generateKeyPair();
@@ -58,6 +64,6 @@ public class SecurityConfiguration<T> {
      * @see com.sec.project.utils.Constants
      */
     public String generateMessageDigest(@NotNull T object) throws NoSuchAlgorithmException {
-        return new String(MessageDigest.getInstance(DIGEST_ALGORITHM).digest(null));
+        return new String(MessageDigest.getInstance(DIGEST_ALGORITHM).digest(conversionUtils.convertObjectToBytes(object)));
     }
 }

@@ -19,12 +19,17 @@ public class StaticNodeConfiguration {
     public final List<Integer> ports = Arrays.asList(4000, 4001, 4002, 4003);
 
     /**
+     * Faulty Nodes. Used to get the Quorum size for the given IBFT instance.
+     */
+    public final int faultyNodes = 1;
+
+    /**
      * Method that calculates the Quorum size for a given number of elements in the Blockchain.
      *
      * @return minimum messages for the quorum to take place.
      */
     public final int getQuorum() {
-        return 3;
+        return 2 * faultyNodes + 1;
     }
 
 }
