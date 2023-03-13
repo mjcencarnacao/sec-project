@@ -13,7 +13,7 @@ import java.io.Serializable;
  * @param timestamp indicating when the creation of the message took place.
  * @param value     to be appended to the blockchain.
  */
-public record Message(MessageType type, long id, long round, long timestamp, String value) implements Serializable {
+public record Message(MessageType type, long id, long round, long timestamp, String value) {
     public Message(MessageType type, long id, long round, String value) {
         this(type, id, round, System.currentTimeMillis(), value);
     }
