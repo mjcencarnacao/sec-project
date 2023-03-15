@@ -2,7 +2,6 @@ package com.sec.project.domain.usecases.consensus;
 
 import com.sec.project.domain.models.enums.SendingMethod;
 import com.sec.project.domain.models.records.Message;
-import com.sec.project.domain.usecases.UseCase;
 import com.sec.project.infrastructure.annotations.Byzantine;
 import com.sec.project.utils.NetworkUtils;
 import org.slf4j.Logger;
@@ -18,20 +17,20 @@ import java.util.Optional;
  * @see NetworkUtils
  */
 @Service
-public class SendRoundChangeUseCase implements UseCase {
+public class SendRoundChangeConsensusUseCase implements ConsensusUseCase {
 
     private final NetworkUtils<Message> networkUtils;
-    private final Logger logger = LoggerFactory.getLogger(SendPrepareMessageUseCase.class);
+    private final Logger logger = LoggerFactory.getLogger(SendPrepareMessageConsensusUseCase.class);
 
     @Autowired
-    public SendRoundChangeUseCase(NetworkUtils<Message> networkUtils) {
+    public SendRoundChangeConsensusUseCase(NetworkUtils<Message> networkUtils) {
         this.networkUtils = networkUtils;
     }
 
     @Override
     @Byzantine
     public void execute(Message message) {
-        networkUtils.sendMessage(message, SendingMethod.BROADCAST, Optional.empty(), false);
+        networkUtils.sendMessage(message, SendingMethod.BROADCAST, Optional.empty(), true);
         logger.info(String.format("Member sent a Round Change for message with ID: %d", message.id()));
     }
 }

@@ -4,9 +4,8 @@ import com.google.gson.Gson;
 import com.sec.project.domain.models.enums.SendingMethod;
 import com.sec.project.infrastructure.configuration.SecurityConfiguration;
 import com.sec.project.infrastructure.configuration.StaticNodeConfiguration;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -31,7 +30,6 @@ public class NetworkUtils<T> {
 
     private final Gson gson;
     private final SecurityConfiguration<byte[]> securityConfiguration;
-    private final Logger logger = LoggerFactory.getLogger(NetworkUtils.class);
 
     @Autowired
     public NetworkUtils(Gson gson, SecurityConfiguration<byte[]> securityConfiguration) {
@@ -47,11 +45,12 @@ public class NetworkUtils<T> {
      * @param receiver      optional parameter specifying the receiver if the sending method is a UNICAST.
      * @throws IllegalArgumentException for unknown sending methods.
      */
-    public void sendMessage(T object, SendingMethod sendingMethod, Optional<Integer> receiver, boolean keyExchange) {
-        byte[] encryptedBytes = keyExchange ? gson.toJson(object).getBytes() : securityConfiguration.symmetricEncoding(gson.toJson(object).getBytes());
+    public void sendMessage(T object, SendingMethod sendingMethod, Optional<Integer> receiver, boolean encryptionDisabled) {
+        byte[] encryptedBytes = encryptionDisabled ? gson.toJson(object).getBytes() : securityConfiguration.symmetricEncoding(gson.toJson(object).getBytes());
         switch (sendingMethod) {
             case UNICAST -> receiver.ifPresent(integer -> createPacketForDelivery(encryptedBytes, integer));
-            case BROADCAST -> StaticNodeConfiguration.ports.forEach(port -> createPacketForDelivery(encryptedBytes, port));
+            case BROADCAST ->
+                    StaticNodeConfiguration.ports.forEach(port -> createPacketForDelivery(encryptedBytes, port));
             default -> throw new IllegalArgumentException(String.format("Unknown value %s", sendingMethod.name()));
         }
     }
@@ -63,17 +62,29 @@ public class NetworkUtils<T> {
      * @return the Object, of which the class is passed as an argument.
      * @throws RuntimeException in case of any Input/Output errors.
      */
-    public ImmutablePair<Integer, T> receiveResponse(Class<T> objectClass, boolean keyExchange) {
+    public ImmutablePair<Integer, T> receiveResponse(Class<T> objectClass, boolean encryptionDisabled) {
         byte[] buffer = new byte[MAX_BUFFER_SIZE];
         try {
             DatagramSocket socket = self.getConnection().datagramSocket();
             DatagramPacket dataReceived = new DatagramPacket(buffer, buffer.length);
             socket.receive(dataReceived);
-            byte[] decrypted = keyExchange ? buffer : securityConfiguration.symmetricDecoding(buffer);
-            return new ImmutablePair<>(dataReceived.getPort(), gson.fromJson(new String(decrypted).trim(), objectClass));
+            byte[] decryptedBytes = encryptionDisabled ? buffer : securityConfiguration.symmetricDecoding(new String(addPadding(new String(buffer).trim().getBytes())).getBytes());
+            return new ImmutablePair<>(dataReceived.getPort(), gson.fromJson(new String(decryptedBytes).trim(), objectClass));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * Add padding to encrypted messages in order for the blocks be dividable by 16.
+     *
+     * @param input message that requires padding.
+     * @return padded message.
+     */
+    private byte[] addPadding(byte[] input) {
+        int paddingSize = 0;
+        while (input.length + paddingSize % 16 != 0) paddingSize++;
+        return StringUtils.rightPad(new String(input), paddingSize, " ").getBytes();
     }
 
     /**
@@ -85,7 +96,7 @@ public class NetworkUtils<T> {
     public T receiveQuorumResponse(Class<T> objectClass) {
         List<T> responses = new ArrayList<>();
         while (responses.size() != StaticNodeConfiguration.getQuorum())
-            responses.add(receiveResponse(objectClass, false).right);
+            responses.add(receiveResponse(objectClass, true).right);
         return responses.get(0);
     }
 

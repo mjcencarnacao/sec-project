@@ -1,7 +1,5 @@
 package com.sec.project.domain.usecases.exchange;
 
-import com.sec.project.domain.models.records.Message;
-import com.sec.project.domain.usecases.UseCase;
 import com.sec.project.infrastructure.configuration.SecurityConfiguration;
 import com.sec.project.utils.NetworkUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -17,10 +15,10 @@ import static com.sec.project.interfaces.CommandLineInterface.self;
 import static com.sec.project.utils.Constants.SYMMETRIC_ALGORITHM;
 
 @Service
-public class ShareSecretKeyUseCase implements UseCase {
+public class ShareSecretKeyConsensusUseCase implements ExchangeUseCase {
 
     /**
-     * Network Utils to perform the exchange of Public Keys with other peers.
+     * Network Utils to perform the exchange of Secret Keys with other peers.
      */
     private final NetworkUtils<byte[]> networkUtils;
 
@@ -30,17 +28,17 @@ public class ShareSecretKeyUseCase implements UseCase {
     private final SecurityConfiguration<byte[]> securityConfiguration;
 
     @Autowired
-    public ShareSecretKeyUseCase(NetworkUtils<byte[]> networkUtils, SecurityConfiguration<byte[]> securityConfiguration) {
+    public ShareSecretKeyConsensusUseCase(NetworkUtils<byte[]> networkUtils, SecurityConfiguration<byte[]> securityConfiguration) {
         this.networkUtils = networkUtils;
         this.securityConfiguration = securityConfiguration;
     }
 
     @Override
-    public void execute(Message message) {
+    public void execute() {
         if (self.getRole().isLeader()) {
             securityConfiguration.setSymmetricKey(securityConfiguration.getEncodedSymmetricKey());
             byte[] encryptedKey = securityConfiguration.asymmetricEncoding(securityConfiguration.getSymmetricKey().getEncoded());
-            networkUtils.sendMessage(encryptedKey, BROADCAST, Optional.empty(), false);
+            networkUtils.sendMessage(encryptedKey, BROADCAST, Optional.empty(), true);
         } else {
             ImmutablePair<Integer, byte[]> response = networkUtils.receiveResponse(byte[].class, true);
             byte[] decryptedKey = securityConfiguration.asymmetricDecoding(response.right, response.left);

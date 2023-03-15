@@ -2,7 +2,7 @@ package com.sec.project.domain.usecases;
 
 import com.sec.project.domain.models.enums.SendingMethod;
 import com.sec.project.domain.models.records.Message;
-import com.sec.project.domain.usecases.consensus.SendRoundChangeUseCase;
+import com.sec.project.domain.usecases.consensus.SendRoundChangeConsensusUseCase;
 import com.sec.project.utils.NetworkUtils;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -18,13 +18,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @SpringBootTest
-class SendRoundChangeUseCaseTest {
+class SendRoundChangeConsensusUseCaseTest {
 
     @Mock
     private NetworkUtils<Message> networkUtils;
 
     @InjectMocks
-    private SendRoundChangeUseCase sendRoundChangeUseCase;
+    private SendRoundChangeConsensusUseCase sendRoundChangeUseCase;
 
     @BeforeTestClass
     public void beforeTestClass() {

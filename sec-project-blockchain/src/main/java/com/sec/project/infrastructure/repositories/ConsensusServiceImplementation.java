@@ -3,10 +3,10 @@ package com.sec.project.infrastructure.repositories;
 import com.sec.project.domain.models.records.Message;
 import com.sec.project.domain.models.records.Queue;
 import com.sec.project.domain.repositories.ConsensusService;
-import com.sec.project.domain.usecases.consensus.SendCommitMessageUseCase;
-import com.sec.project.domain.usecases.consensus.SendPrePrepareMessageUseCase;
-import com.sec.project.domain.usecases.consensus.SendPrepareMessageUseCase;
 import com.sec.project.domain.usecases.consensus.ConsensusUseCaseCollection;
+import com.sec.project.domain.usecases.consensus.SendCommitMessageConsensusUseCase;
+import com.sec.project.domain.usecases.consensus.SendPrePrepareMessageConsensusUseCase;
+import com.sec.project.domain.usecases.consensus.SendPrepareMessageConsensusUseCase;
 import com.sec.project.utils.NetworkUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -38,7 +38,7 @@ public class ConsensusServiceImplementation implements ConsensusService {
      */
     @Override
     public void start() {
-        Message message = new Message(null,0,0,"TEST");
+        Message message = new Message(null, 0, 0, "TEST");
         handleMessageTypes(message);
         round++;
     }
@@ -48,11 +48,10 @@ public class ConsensusServiceImplementation implements ConsensusService {
      * After everything is committed a proper decide will take place to ensure the blockchain appends (or not) a given message.
      *
      * @param received previous prepare message.
-     * @see SendCommitMessageUseCase
+     * @see SendCommitMessageConsensusUseCase
      */
     @Override
     public void sendCommitMessage(Message received) {
-        System.out.println("COMMIT" + received.value());
         Message message = new Message(COMMIT, received.id(), round, received.value());
         useCaseCollection.sendCommitMessageUseCase().execute(message);
         handleMessageTypes(message);
@@ -62,11 +61,10 @@ public class ConsensusServiceImplementation implements ConsensusService {
      * Method that handles the delivery of the prepared messages to ensure the IBFT protocol integrity.
      *
      * @param received previous pre-prepare message.
-     * @see SendPrepareMessageUseCase
+     * @see SendPrepareMessageConsensusUseCase
      */
     @Override
     public void sendPrepareMessage(Message received) {
-        System.out.println("PREPARED" + received.value());
         Message message = new Message(PREPARE, received.id(), round, received.value());
         useCaseCollection.sendPrepareMessageUseCase().execute(message);
         handleMessageTypes(networkUtils.receiveQuorumResponse(Message.class));
@@ -77,11 +75,10 @@ public class ConsensusServiceImplementation implements ConsensusService {
      * Only the Leader can execute this (specified in the use case).
      *
      * @param received client message request.
-     * @see SendPrePrepareMessageUseCase
+     * @see SendPrePrepareMessageConsensusUseCase
      */
     @Override
     public void sendPrePrepareMessage(Message received) {
-        System.out.println("PRE" + received.value());
         Message message = new Message(PRE_PREPARE, received.id(), round, received.value());
         useCaseCollection.sendPrePrepareMessageUseCase().execute(message);
         handleMessageTypes(networkUtils.receiveQuorumResponse(Message.class));
@@ -103,6 +100,7 @@ public class ConsensusServiceImplementation implements ConsensusService {
      */
     private void handleMessageTypes(Message message) {
         if (message.type() == null) message = new Message(PRE_PREPARE, message.timestamp(), round, message.value());
+        System.out.println("MESSAGE: " + message.type().toString());
         switch (message.type()) {
             case PRE_PREPARE -> sendPrepareMessage(message);
             case PREPARE -> sendCommitMessage(message);

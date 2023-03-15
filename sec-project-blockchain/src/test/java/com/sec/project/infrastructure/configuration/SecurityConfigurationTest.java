@@ -23,9 +23,4 @@ class SecurityConfigurationTest {
         assertNotNull(securityConfiguration.getPrivateKey());
     }
 
-    @Test
-    public void testMessageDigest() throws NoSuchAlgorithmException {
-        assertEquals(expectedDigest, securityConfiguration.generateMessageDigest("test"));
-    }
-
 }

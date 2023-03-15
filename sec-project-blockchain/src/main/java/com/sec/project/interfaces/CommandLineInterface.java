@@ -14,9 +14,6 @@ import org.springframework.shell.standard.ShellOption;
 
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
-import java.util.concurrent.ExecutionException;
 
 /**
  * Spring Shell Component that allows a more interactive way of the user to communicate, providing custom commands defined
@@ -60,8 +57,7 @@ public class CommandLineInterface {
     @ShellMethod("Start the Consensus service.")
     public void start() throws Exception {
         logger.info("Started the Key Exchange and IBFT protocol.");
-        keyExchangeService.exchangeKeys();
-        consensusService.start();
+        keyExchangeService.exchangeKeys(consensusService::start);
     }
 
     /**

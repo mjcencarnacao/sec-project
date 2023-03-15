@@ -2,7 +2,7 @@ package com.sec.project.domain.usecases;
 
 import com.sec.project.domain.models.enums.SendingMethod;
 import com.sec.project.domain.models.records.Message;
-import com.sec.project.domain.usecases.consensus.SendCommitMessageUseCase;
+import com.sec.project.domain.usecases.consensus.SendCommitMessageConsensusUseCase;
 import com.sec.project.utils.NetworkUtils;
 import org.aspectj.lang.annotation.Before;
 import org.junit.jupiter.api.Test;
@@ -18,13 +18,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @SpringBootTest
-class SendCommitMessageUseCaseTest {
+class SendCommitMessageConsensusUseCaseTest {
 
     @Mock
     private NetworkUtils<Message> networkUtils;
 
     @InjectMocks
-    private SendCommitMessageUseCase sendCommitMessageUseCase;
+    private SendCommitMessageConsensusUseCase sendCommitMessageUseCase;
 
     @Before("")
     public void beforeTestClass() {
