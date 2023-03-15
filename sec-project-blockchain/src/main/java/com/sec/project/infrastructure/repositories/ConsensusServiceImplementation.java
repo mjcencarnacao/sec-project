@@ -8,6 +8,8 @@ import com.sec.project.domain.usecases.consensus.SendCommitMessageConsensusUseCa
 import com.sec.project.domain.usecases.consensus.SendPrePrepareMessageConsensusUseCase;
 import com.sec.project.domain.usecases.consensus.SendPrepareMessageConsensusUseCase;
 import com.sec.project.utils.NetworkUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -23,8 +25,9 @@ public class ConsensusServiceImplementation implements ConsensusService {
 
     private long round = 1;
     private final NetworkUtils<Message> networkUtils;
-    private final ConsensusUseCaseCollection useCaseCollection;
     private final Queue blockchainTransactions = new Queue();
+    private final ConsensusUseCaseCollection useCaseCollection;
+    private final Logger logger = LoggerFactory.getLogger(ConsensusServiceImplementation.class);
 
     @Autowired
     public ConsensusServiceImplementation(NetworkUtils<Message> networkUtils, ConsensusUseCaseCollection useCaseCollection) {
@@ -38,8 +41,7 @@ public class ConsensusServiceImplementation implements ConsensusService {
      */
     @Override
     public void start() {
-        Message message = new Message(null, 0, 0, "TEST");
-        handleMessageTypes(message);
+        handleMessageTypes(networkUtils.receiveResponse(Message.class, true).right);
         round++;
     }
 
@@ -91,6 +93,7 @@ public class ConsensusServiceImplementation implements ConsensusService {
     @Override
     public void decide(Message message) {
         blockchainTransactions.queue().add(message);
+        logger.info("Added to the blockchain with value: " + message.value());
     }
 
     /**
