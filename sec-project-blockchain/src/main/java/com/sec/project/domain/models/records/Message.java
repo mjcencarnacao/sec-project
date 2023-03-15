@@ -2,8 +2,6 @@ package com.sec.project.domain.models.records;
 
 import com.sec.project.domain.models.enums.MessageType;
 
-import java.io.Serializable;
-
 /**
  * Message object record containing the different types of field required to be sent to the blockchain.
  *

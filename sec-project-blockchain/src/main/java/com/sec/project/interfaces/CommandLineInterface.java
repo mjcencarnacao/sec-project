@@ -4,6 +4,7 @@ import com.sec.project.domain.models.enums.Mode;
 import com.sec.project.domain.models.enums.Role;
 import com.sec.project.domain.models.valueobjects.Node;
 import com.sec.project.domain.repositories.ConsensusService;
+import com.sec.project.domain.repositories.KeyExchangeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,8 @@ import org.springframework.shell.standard.ShellOption;
 
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -24,11 +27,13 @@ public class CommandLineInterface {
 
     public static Node self;
     private final ConsensusService consensusService;
+    private final KeyExchangeService keyExchangeService;
     private final Logger logger = LoggerFactory.getLogger(CommandLineInterface.class);
 
     @Autowired
-    public CommandLineInterface(ConsensusService consensusService) {
+    public CommandLineInterface(ConsensusService consensusService, KeyExchangeService keyExchangeService) {
         this.consensusService = consensusService;
+        this.keyExchangeService = keyExchangeService;
     }
 
     /**
@@ -53,8 +58,9 @@ public class CommandLineInterface {
      * The method can be executed in the command line by writing: init
      */
     @ShellMethod("Start the Consensus service.")
-    public void start() throws ExecutionException, InterruptedException {
-        logger.info("Started IBFT protocol.");
+    public void start() throws Exception {
+        logger.info("Started the Key Exchange and IBFT protocol.");
+        keyExchangeService.exchangeKeys();
         consensusService.start();
     }
 

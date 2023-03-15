@@ -1,7 +1,8 @@
-package com.sec.project.domain.usecases;
+package com.sec.project.domain.usecases.consensus;
 
 import com.sec.project.domain.models.enums.SendingMethod;
 import com.sec.project.domain.models.records.Message;
+import com.sec.project.domain.usecases.UseCase;
 import com.sec.project.infrastructure.annotations.Byzantine;
 import com.sec.project.utils.NetworkUtils;
 import org.slf4j.Logger;
@@ -34,7 +35,7 @@ public class SendPrePrepareMessageUseCase implements UseCase {
     @Byzantine
     public void execute(Message message) {
         if (self.getRole().isLeader()) {
-            networkUtils.sendMessage(message, SendingMethod.BROADCAST, Optional.empty());
+            networkUtils.sendMessage(message, SendingMethod.BROADCAST, Optional.empty(), false);
             logger.info(String.format("Leader sent Pre-Prepare request for message with ID: %d", message.id()));
         }
     }

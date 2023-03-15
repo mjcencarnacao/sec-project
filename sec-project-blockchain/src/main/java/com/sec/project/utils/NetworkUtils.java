@@ -2,7 +2,9 @@ package com.sec.project.utils;
 
 import com.google.gson.Gson;
 import com.sec.project.domain.models.enums.SendingMethod;
+import com.sec.project.infrastructure.configuration.SecurityConfiguration;
 import com.sec.project.infrastructure.configuration.StaticNodeConfiguration;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,13 +30,13 @@ import static com.sec.project.utils.Constants.MAX_BUFFER_SIZE;
 public class NetworkUtils<T> {
 
     private final Gson gson;
-    private final StaticNodeConfiguration staticNodeConfiguration;
+    private final SecurityConfiguration<byte[]> securityConfiguration;
     private final Logger logger = LoggerFactory.getLogger(NetworkUtils.class);
 
     @Autowired
-    public NetworkUtils(Gson gson, StaticNodeConfiguration staticNodeConfiguration) {
+    public NetworkUtils(Gson gson, SecurityConfiguration<byte[]> securityConfiguration) {
         this.gson = gson;
-        this.staticNodeConfiguration = staticNodeConfiguration;
+        this.securityConfiguration = securityConfiguration;
     }
 
     /**
@@ -45,11 +47,11 @@ public class NetworkUtils<T> {
      * @param receiver      optional parameter specifying the receiver if the sending method is a UNICAST.
      * @throws IllegalArgumentException for unknown sending methods.
      */
-    public void sendMessage(T object, SendingMethod sendingMethod, Optional<Integer> receiver) {
-        byte[] bytes = gson.toJson(object).getBytes();
+    public void sendMessage(T object, SendingMethod sendingMethod, Optional<Integer> receiver, boolean keyExchange) {
+        byte[] encryptedBytes = keyExchange ? gson.toJson(object).getBytes() : securityConfiguration.symmetricEncoding(gson.toJson(object).getBytes());
         switch (sendingMethod) {
-            case UNICAST -> receiver.ifPresent(integer -> createPacketForDelivery(bytes, integer));
-            case BROADCAST -> staticNodeConfiguration.ports.forEach(port -> createPacketForDelivery(bytes, port));
+            case UNICAST -> receiver.ifPresent(integer -> createPacketForDelivery(encryptedBytes, integer));
+            case BROADCAST -> StaticNodeConfiguration.ports.forEach(port -> createPacketForDelivery(encryptedBytes, port));
             default -> throw new IllegalArgumentException(String.format("Unknown value %s", sendingMethod.name()));
         }
     }
@@ -61,14 +63,14 @@ public class NetworkUtils<T> {
      * @return the Object, of which the class is passed as an argument.
      * @throws RuntimeException in case of any Input/Output errors.
      */
-    public T receiveResponse(Class<T> objectClass) {
+    public ImmutablePair<Integer, T> receiveResponse(Class<T> objectClass, boolean keyExchange) {
         byte[] buffer = new byte[MAX_BUFFER_SIZE];
         try {
             DatagramSocket socket = self.getConnection().datagramSocket();
             DatagramPacket dataReceived = new DatagramPacket(buffer, buffer.length);
             socket.receive(dataReceived);
-            System.out.println(gson.fromJson(new String(buffer).trim(), objectClass));
-            return gson.fromJson(new String(buffer).trim(), objectClass);
+            byte[] decrypted = keyExchange ? buffer : securityConfiguration.symmetricDecoding(buffer);
+            return new ImmutablePair<>(dataReceived.getPort(), gson.fromJson(new String(decrypted).trim(), objectClass));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -80,11 +82,11 @@ public class NetworkUtils<T> {
      * @param objectClass required to allow the recovery of the original object type.
      * @return the Object, of which the class is passed as an argument.
      */
-    public List<T> receiveQuorumResponse(Class<T> objectClass) {
+    public T receiveQuorumResponse(Class<T> objectClass) {
         List<T> responses = new ArrayList<>();
-        while (responses.size() != staticNodeConfiguration.getQuorum())
-            responses.add(receiveResponse(objectClass));
-        return responses;
+        while (responses.size() != StaticNodeConfiguration.getQuorum())
+            responses.add(receiveResponse(objectClass, false).right);
+        return responses.get(0);
     }
 
     /**

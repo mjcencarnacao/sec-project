@@ -4,8 +4,15 @@ import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
 import java.security.*;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 
+import static com.sec.project.infrastructure.repositories.KeyExchangeServiceImplementation.publicKeyPeerHashMap;
 import static com.sec.project.utils.Constants.*;
 
 /**
@@ -21,9 +28,16 @@ public class SecurityConfiguration<T> {
     private final KeyPair keyPair;
 
     /**
-     * Conversion Utils to get the byte array from a generic object.
+     * Current Symmetric Communication Key
      */
-    private final ConversionUtils<T> conversionUtils;
+    private SecretKey symmetricKey = null;
+
+    /**
+     * Cipher objects for encryption and decryption
+     */
+    private final Cipher symmetricCipher;
+    private final Cipher asymmetricCipher;
+
 
     /**
      * Initializes the key pair defined above using the RSA algorithm, which is defined in the Constants.java file.
@@ -32,11 +46,17 @@ public class SecurityConfiguration<T> {
      * @see com.sec.project.utils.Constants
      */
     @Autowired
-    public SecurityConfiguration(ConversionUtils<T> conversionUtils) throws NoSuchAlgorithmException {
-        this.conversionUtils = conversionUtils;
-        KeyPairGenerator generator = KeyPairGenerator.getInstance(ALGORITHM);
-        generator.initialize(KEY_SIZE);
+    public SecurityConfiguration() throws NoSuchAlgorithmException, NoSuchPaddingException {
+        this.symmetricCipher = Cipher.getInstance(SYMMETRIC_TRANSFORMATION_ALGORITHM);
+        this.asymmetricCipher = Cipher.getInstance(ASYMMETRIC_TRANSFORMATION_ALGORITHM);
+        KeyPairGenerator generator = KeyPairGenerator.getInstance(ASYMMETRIC_ALGORITHM);
+        SecureRandom random = SecureRandom.getInstance("SHA1PRNG");
+        generator.initialize(ASYMMETRIC_KEY_SIZE, random);
         this.keyPair = generator.generateKeyPair();
+    }
+
+    public PublicKey bytesArrayToPublicKey(byte[] bytes) throws NoSuchAlgorithmException, InvalidKeySpecException {
+        return KeyFactory.getInstance(ASYMMETRIC_ALGORITHM).generatePublic(new X509EncodedKeySpec(bytes));
     }
 
     /**
@@ -57,6 +77,32 @@ public class SecurityConfiguration<T> {
         return keyPair.getPrivate();
     }
 
+    public SecretKey getSymmetricKey() {
+        return symmetricKey;
+    }
+
+    public void setSymmetricKey(SecretKey symmetricKey) {
+        this.symmetricKey = symmetricKey;
+    }
+
+    public byte[] asymmetricEncoding(byte[] input) {
+        try {
+            asymmetricCipher.init(Cipher.ENCRYPT_MODE, getPrivateKey());
+            return asymmetricCipher.doFinal(input);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public byte[] asymmetricDecoding(byte[] encoded, int port) {
+        try {
+            asymmetricCipher.init(Cipher.DECRYPT_MODE, publicKeyPeerHashMap.get(port));
+            return asymmetricCipher.doFinal(encoded);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     /**
      * Returns message digest for the algorithm specified in the Constants file (DIGEST_ALGORITHM).
      *
@@ -64,6 +110,36 @@ public class SecurityConfiguration<T> {
      * @see com.sec.project.utils.Constants
      */
     public String generateMessageDigest(@NotNull T object) throws NoSuchAlgorithmException {
-        return new String(MessageDigest.getInstance(DIGEST_ALGORITHM).digest(conversionUtils.convertObjectToBytes(object)));
+        return "";
+        //return new String(MessageDigest.getInstance(DIGEST_ALGORITHM).digest(conversionUtils.convertObjectToBytes(object)));
     }
+
+    public byte[] symmetricEncoding(byte[] input) {
+        try {
+            symmetricCipher.init(Cipher.ENCRYPT_MODE, symmetricKey);
+            return symmetricCipher.doFinal(input);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public byte[] symmetricDecoding(byte[] bytes) {
+        try {
+            symmetricCipher.init(Cipher.DECRYPT_MODE, symmetricKey);
+            return symmetricCipher.doFinal(bytes);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public SecretKey getEncodedSymmetricKey() {
+        try {
+            KeyGenerator keygen = KeyGenerator.getInstance(SYMMETRIC_ALGORITHM);
+            keygen.init(SYMMETRIC_KEY_SIZE);
+            return keygen.generateKey();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 }

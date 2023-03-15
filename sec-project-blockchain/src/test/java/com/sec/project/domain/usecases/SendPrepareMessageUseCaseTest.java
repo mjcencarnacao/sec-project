@@ -2,6 +2,7 @@ package com.sec.project.domain.usecases;
 
 import com.sec.project.domain.models.enums.SendingMethod;
 import com.sec.project.domain.models.records.Message;
+import com.sec.project.domain.usecases.consensus.SendPrepareMessageUseCase;
 import com.sec.project.utils.NetworkUtils;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -34,7 +35,7 @@ class SendPrepareMessageUseCaseTest {
     void testExecute() {
         Message message = new Message(PREPARE, -1, -1, "TEST_VALUE");
         sendPrepareMessageUseCase.execute(message);
-        verify(networkUtils, times(1)).sendMessage(message, SendingMethod.BROADCAST, Optional.empty());
+        verify(networkUtils, times(1)).sendMessage(message, SendingMethod.BROADCAST, Optional.empty(), false);
     }
 
 }

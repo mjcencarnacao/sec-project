@@ -1,11 +1,12 @@
 package com.sec.project.infrastructure.repositories;
 
 import com.sec.project.domain.models.records.Message;
+import com.sec.project.domain.models.records.Queue;
 import com.sec.project.domain.repositories.ConsensusService;
-import com.sec.project.domain.usecases.SendCommitMessageUseCase;
-import com.sec.project.domain.usecases.SendPrePrepareMessageUseCase;
-import com.sec.project.domain.usecases.SendPrepareMessageUseCase;
-import com.sec.project.domain.usecases.UseCaseCollection;
+import com.sec.project.domain.usecases.consensus.SendCommitMessageUseCase;
+import com.sec.project.domain.usecases.consensus.SendPrePrepareMessageUseCase;
+import com.sec.project.domain.usecases.consensus.SendPrepareMessageUseCase;
+import com.sec.project.domain.usecases.consensus.ConsensusUseCaseCollection;
 import com.sec.project.utils.NetworkUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,10 +23,11 @@ public class ConsensusServiceImplementation implements ConsensusService {
 
     private long round = 1;
     private final NetworkUtils<Message> networkUtils;
-    private final UseCaseCollection useCaseCollection;
+    private final ConsensusUseCaseCollection useCaseCollection;
+    private final Queue blockchainTransactions = new Queue();
 
     @Autowired
-    public ConsensusServiceImplementation(NetworkUtils<Message> networkUtils, UseCaseCollection useCaseCollection) {
+    public ConsensusServiceImplementation(NetworkUtils<Message> networkUtils, ConsensusUseCaseCollection useCaseCollection) {
         this.networkUtils = networkUtils;
         this.useCaseCollection = useCaseCollection;
     }
@@ -36,7 +38,8 @@ public class ConsensusServiceImplementation implements ConsensusService {
      */
     @Override
     public void start() {
-        handleMessageTypes(networkUtils.receiveResponse(Message.class));
+        Message message = new Message(null,0,0,"TEST");
+        handleMessageTypes(message);
         round++;
     }
 
@@ -49,8 +52,10 @@ public class ConsensusServiceImplementation implements ConsensusService {
      */
     @Override
     public void sendCommitMessage(Message received) {
+        System.out.println("COMMIT" + received.value());
         Message message = new Message(COMMIT, received.id(), round, received.value());
         useCaseCollection.sendCommitMessageUseCase().execute(message);
+        handleMessageTypes(message);
     }
 
     /**
@@ -61,9 +66,10 @@ public class ConsensusServiceImplementation implements ConsensusService {
      */
     @Override
     public void sendPrepareMessage(Message received) {
+        System.out.println("PREPARED" + received.value());
         Message message = new Message(PREPARE, received.id(), round, received.value());
         useCaseCollection.sendPrepareMessageUseCase().execute(message);
-        handleMessageTypes(networkUtils.receiveQuorumResponse(Message.class).get(0));
+        handleMessageTypes(networkUtils.receiveQuorumResponse(Message.class));
     }
 
     /**
@@ -75,9 +81,10 @@ public class ConsensusServiceImplementation implements ConsensusService {
      */
     @Override
     public void sendPrePrepareMessage(Message received) {
+        System.out.println("PRE" + received.value());
         Message message = new Message(PRE_PREPARE, received.id(), round, received.value());
         useCaseCollection.sendPrePrepareMessageUseCase().execute(message);
-        handleMessageTypes(networkUtils.receiveQuorumResponse(Message.class).get(0));
+        handleMessageTypes(networkUtils.receiveQuorumResponse(Message.class));
     }
 
     /**
@@ -85,8 +92,8 @@ public class ConsensusServiceImplementation implements ConsensusService {
      * in the IBFT protocol.
      */
     @Override
-    public void decide() {
-
+    public void decide(Message message) {
+        blockchainTransactions.queue().add(message);
     }
 
     /**
@@ -99,7 +106,7 @@ public class ConsensusServiceImplementation implements ConsensusService {
         switch (message.type()) {
             case PRE_PREPARE -> sendPrepareMessage(message);
             case PREPARE -> sendCommitMessage(message);
-            case COMMIT -> decide();
+            case COMMIT -> decide(message);
             default -> sendPrePrepareMessage(message);
         }
     }
