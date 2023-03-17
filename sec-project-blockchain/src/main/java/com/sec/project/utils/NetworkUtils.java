@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -99,14 +100,28 @@ public class NetworkUtils<T> {
      */
     public T receiveQuorumResponse(Class<T> objectClass) {
         List<T> responses = new ArrayList<>();
-        List<String> hashes = new ArrayList<>();
+        AtomicReference<T> nonByzantineMessage = new AtomicReference<>();
         while (responses.size() != StaticNodeConfiguration.ports.size())
             responses.add(gson.fromJson(new String(receiveResponse(true).right.data()).trim(), objectClass));
-        responses.forEach(response -> hashes.add(securityConfiguration.generateMessageDigest(gson.toJson(response).getBytes())));
-        long x = hashes.stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting())).entrySet().stream().max(Map.Entry.comparingByValue()).get().getValue();
-        System.out.println(x);
-        if (x >= StaticNodeConfiguration.getQuorum()) return responses.get(0);
-        return null;
+        responses.forEach(message -> {
+            if (securityConfiguration.generateMessageDigest(gson.toJson(message).getBytes()).equals(hasQuorumOfValidMessages(responses)))
+                nonByzantineMessage.set(message);
+        });
+        return nonByzantineMessage.get();
+    }
+
+    /**
+     * Returns the hash of the valid messages in the Quorum.
+     *
+     * @param messages list
+     * @return valid hash
+     */
+    private String hasQuorumOfValidMessages(List<T> messages) {
+        List<String> hashes = new ArrayList<>();
+        AtomicReference<ImmutablePair<String, Long>> predominantHash = new AtomicReference<>();
+        messages.forEach(response -> hashes.add(securityConfiguration.generateMessageDigest(gson.toJson(response).getBytes())));
+        hashes.stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting())).entrySet().stream().max(Map.Entry.comparingByValue()).ifPresent(max -> predominantHash.set(new ImmutablePair<>(max.getKey(), max.getValue())));
+        return predominantHash.get().right >= StaticNodeConfiguration.getQuorum() ? predominantHash.get().left : null;
     }
 
     /**

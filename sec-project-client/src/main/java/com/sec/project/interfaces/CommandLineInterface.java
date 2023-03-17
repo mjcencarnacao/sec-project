@@ -35,7 +35,6 @@ public class CommandLineInterface {
      */
     @ShellMethod("Append a message to the blockchain.")
     public void append(@ShellOption(value = "-s", defaultValue = "") String message) {
-        logger.info(String.format("Client sent message with value %s", message));
         sendMessageUseCase.execute(new Message(message));
         receiveResponseUseCase.execute();
     }

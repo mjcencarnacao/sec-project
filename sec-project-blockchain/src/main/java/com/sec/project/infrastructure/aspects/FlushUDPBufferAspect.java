@@ -19,7 +19,7 @@ import static com.sec.project.utils.Constants.DEFAULT_TIMEOUT;
 public class FlushUDPBufferAspect {
 
     private final NetworkUtils<Message> networkUtils;
-    private final Logger logger = LoggerFactory.getLogger(ByzantineAspect.class);
+    private final Logger logger = LoggerFactory.getLogger(FlushUDPBufferAspect.class);
 
     @Autowired
     public FlushUDPBufferAspect(NetworkUtils<Message> networkUtils) {

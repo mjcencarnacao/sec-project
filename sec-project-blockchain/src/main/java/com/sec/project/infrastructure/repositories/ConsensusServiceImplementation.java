@@ -128,7 +128,9 @@ public class ConsensusServiceImplementation implements ConsensusService {
      * @param message to analyze and handle.
      */
     private void handleMessageTypes(Message message) {
-        if (message.type() == null)
+        if (message == null)
+            start(Optional.empty());
+        else if (message.type() == null)
             sendPrePrepareMessage(new Message(null, blockchainTransactions.queue().size(), round, message.value()));
         else
             switch (message.type()) {

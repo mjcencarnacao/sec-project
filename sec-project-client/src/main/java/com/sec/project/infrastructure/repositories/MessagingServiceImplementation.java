@@ -41,7 +41,7 @@ public class MessagingServiceImplementation implements MessagingService {
     @Override
     public void receiveResponse() {
         Message message = networkUtils.receiveQuorumResponse(Message.class);
-        logger.info("Message was added to the Blockchain with value: " + message.value());
+        logger.info("Received Quorum of Messages from the Blockchain. Value was appended.");
     }
 
 }
