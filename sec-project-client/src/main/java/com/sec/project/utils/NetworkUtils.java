@@ -2,6 +2,8 @@ package com.sec.project.utils;
 
 import com.google.gson.Gson;
 import com.sec.project.domain.models.Connection;
+import com.sec.project.domain.models.MessageTransferObject;
+import com.sec.project.infrastructure.configuration.SecurityConfiguration;
 import com.sec.project.infrastructure.configuration.StaticNodeConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -25,12 +27,14 @@ public class NetworkUtils<T> {
     private final Gson gson;
     private final Connection connection;
     private final StaticNodeConfiguration staticNodeConfiguration;
+    private final SecurityConfiguration<byte[]> securityConfiguration;
 
     @Autowired
-    public NetworkUtils(Gson gson, Connection connection, StaticNodeConfiguration staticNodeConfiguration) {
+    public NetworkUtils(Gson gson, Connection connection, StaticNodeConfiguration staticNodeConfiguration, SecurityConfiguration<byte[]> securityConfiguration) {
         this.gson = gson;
         this.connection = connection;
         this.staticNodeConfiguration = staticNodeConfiguration;
+        this.securityConfiguration = securityConfiguration;
     }
 
     /**
@@ -41,8 +45,9 @@ public class NetworkUtils<T> {
      */
     public void sendMessage(T object) {
         byte[] bytes = gson.toJson(object).getBytes();
-        System.out.println(gson.toJson(object));
-        staticNodeConfiguration.ports.forEach(port -> deliverPacket(bytes, port));
+        MessageTransferObject message = new MessageTransferObject(bytes, securityConfiguration.signMessage(bytes));
+        System.out.println(gson.toJson(message));
+        staticNodeConfiguration.ports.forEach(port -> deliverPacket(gson.toJson(message).getBytes(), port));
     }
 
     /**
@@ -56,7 +61,8 @@ public class NetworkUtils<T> {
         DatagramPacket dataReceived = new DatagramPacket(buffer, buffer.length);
         try (DatagramSocket socket = connection.datagramSocket()) {
             socket.receive(dataReceived);
-            return gson.fromJson(new String(buffer), objectClass);
+            MessageTransferObject response = gson.fromJson(new String(buffer), MessageTransferObject.class);
+            return gson.fromJson(new String(response.data()), objectClass);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

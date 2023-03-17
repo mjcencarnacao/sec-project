@@ -1,17 +1,23 @@
 package com.sec.project.infrastructure.repositories;
 
+import com.google.gson.Gson;
 import com.sec.project.domain.models.records.Message;
+import com.sec.project.domain.models.records.MessageTransferObject;
 import com.sec.project.domain.models.records.Queue;
 import com.sec.project.domain.repositories.ConsensusService;
+import com.sec.project.domain.repositories.KeyExchangeService;
 import com.sec.project.domain.usecases.consensus.ConsensusUseCaseCollection;
 import com.sec.project.domain.usecases.consensus.SendCommitMessageConsensusUseCase;
 import com.sec.project.domain.usecases.consensus.SendPrePrepareMessageConsensusUseCase;
 import com.sec.project.domain.usecases.consensus.SendPrepareMessageConsensusUseCase;
+import com.sec.project.infrastructure.annotations.FlushUDPBuffer;
 import com.sec.project.utils.NetworkUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 import static com.sec.project.domain.models.enums.MessageType.*;
 
@@ -24,15 +30,19 @@ import static com.sec.project.domain.models.enums.MessageType.*;
 public class ConsensusServiceImplementation implements ConsensusService {
 
     private long round = 1;
+    private final Gson gson;
     private final NetworkUtils<Message> networkUtils;
+    private final KeyExchangeService keyExchangeService;
     private final Queue blockchainTransactions = new Queue();
     private final ConsensusUseCaseCollection useCaseCollection;
     private final Logger logger = LoggerFactory.getLogger(ConsensusServiceImplementation.class);
 
     @Autowired
-    public ConsensusServiceImplementation(NetworkUtils<Message> networkUtils, ConsensusUseCaseCollection useCaseCollection) {
+    public ConsensusServiceImplementation(Gson gson, NetworkUtils<Message> networkUtils, ConsensusUseCaseCollection useCaseCollection, KeyExchangeService keyExchangeService) {
+        this.gson = gson;
         this.networkUtils = networkUtils;
         this.useCaseCollection = useCaseCollection;
+        this.keyExchangeService = keyExchangeService;
     }
 
     /**
@@ -40,8 +50,16 @@ public class ConsensusServiceImplementation implements ConsensusService {
      * Waits for a client message and sends it to the message handler defined in the service.
      */
     @Override
-    public void start() {
-        handleMessageTypes(networkUtils.receiveResponse(Message.class, true).right);
+    @FlushUDPBuffer(override = true)
+    public void start(Optional<Message> message) {
+        logger.info("Starting new round for the IBFT algorithm.");
+        if (message.isPresent())
+            handleMessageTypes(message.get());
+        else {
+            Message response = gson.fromJson(new String(networkUtils.receiveResponse(true).right.data()).trim(), Message.class);
+            keyExchangeService.exchangeKeys();
+            handleMessageTypes(response);
+        }
         round++;
     }
 
@@ -54,9 +72,8 @@ public class ConsensusServiceImplementation implements ConsensusService {
      */
     @Override
     public void sendCommitMessage(Message received) {
-        Message message = new Message(COMMIT, received.id(), round, received.value());
-        useCaseCollection.sendCommitMessageUseCase().execute(message);
-        handleMessageTypes(message);
+        useCaseCollection.sendCommitMessageUseCase().execute(new Message(COMMIT, received.id(), round, received.value()));
+        handleMessageTypes(networkUtils.receiveQuorumResponse(Message.class));
     }
 
     /**
@@ -67,8 +84,7 @@ public class ConsensusServiceImplementation implements ConsensusService {
      */
     @Override
     public void sendPrepareMessage(Message received) {
-        Message message = new Message(PREPARE, received.id(), round, received.value());
-        useCaseCollection.sendPrepareMessageUseCase().execute(message);
+        useCaseCollection.sendPrepareMessageUseCase().execute(new Message(PREPARE, received.id(), round, received.value()));
         handleMessageTypes(networkUtils.receiveQuorumResponse(Message.class));
     }
 
@@ -83,17 +99,21 @@ public class ConsensusServiceImplementation implements ConsensusService {
     public void sendPrePrepareMessage(Message received) {
         Message message = new Message(PRE_PREPARE, received.id(), round, received.value());
         useCaseCollection.sendPrePrepareMessageUseCase().execute(message);
-        handleMessageTypes(networkUtils.receiveQuorumResponse(Message.class));
+        MessageTransferObject response = networkUtils.receiveResponse(true).right;
+        handleMessageTypes(gson.fromJson(new String(response.data()).trim(), Message.class));
     }
 
     /**
      * External method that appends a given value to the blockchain after exchanging the correct amount of messages
      * in the IBFT protocol.
+     * After appending waits for new messages from the Client side.
      */
     @Override
     public void decide(Message message) {
         blockchainTransactions.queue().add(message);
         logger.info("Added to the blockchain with value: " + message.value());
+        round = 1;
+        start(Optional.empty());
     }
 
     /**
@@ -102,13 +122,13 @@ public class ConsensusServiceImplementation implements ConsensusService {
      * @param message to analyze and handle.
      */
     private void handleMessageTypes(Message message) {
-        if (message.type() == null) message = new Message(PRE_PREPARE, message.timestamp(), round, message.value());
-        System.out.println("MESSAGE: " + message.type().toString());
-        switch (message.type()) {
-            case PRE_PREPARE -> sendPrepareMessage(message);
-            case PREPARE -> sendCommitMessage(message);
-            case COMMIT -> decide(message);
-            default -> sendPrePrepareMessage(message);
-        }
+        if (message.type() == null)
+            sendPrePrepareMessage(new Message(null, blockchainTransactions.queue().size(), round, message.value()));
+        else
+            switch (message.type()) {
+                case PRE_PREPARE -> sendPrepareMessage(message);
+                case PREPARE -> sendCommitMessage(message);
+                case COMMIT -> decide(message);
+            }
     }
 }

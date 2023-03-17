@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public interface KeyExchangeService {
-    void exchangeKeys(Runnable callback);
+    void exchangeKeys();
 
     void sharePublicKey();
 

@@ -21,21 +21,26 @@ public class KeyExchangeServiceImplementation implements KeyExchangeService {
      */
     public static final HashMap<Integer, PublicKey> publicKeyPeerHashMap = new HashMap<>();
 
+    /**
+     * Boolean indicating if an exchange was already performed or not.
+     */
+    public boolean exchangedPerformed = false;
+
     @Autowired
     public KeyExchangeServiceImplementation(ExchangeUseCaseCollection exchangeUseCaseCollection) {
         this.exchangeUseCaseCollection = exchangeUseCaseCollection;
     }
 
     /**
-     * Execute the exchange of both types of keys. Callback is triggered after exchanged is successful.
-     *
-     * @param callback IBFT algorithm called after exchange.
+     * Execute the exchange of both types of keys (Public and Secret).
      */
     @Override
-    public void exchangeKeys(Runnable callback) {
-        sharePublicKey();
-        shareSessionKey();
-        callback.run();
+    public void exchangeKeys() {
+        if (!exchangedPerformed) {
+            sharePublicKey();
+            shareSessionKey();
+            exchangedPerformed = true;
+        }
     }
 
     /**

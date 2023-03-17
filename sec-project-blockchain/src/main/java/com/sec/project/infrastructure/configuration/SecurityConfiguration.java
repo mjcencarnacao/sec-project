@@ -5,11 +5,10 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
-import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import java.security.*;
-import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 
 import static com.sec.project.infrastructure.repositories.KeyExchangeServiceImplementation.publicKeyPeerHashMap;
 import static com.sec.project.utils.Constants.*;
@@ -19,7 +18,7 @@ import static com.sec.project.utils.Constants.*;
  * Asymmetric and symmetric encryption logic should be handled here and injected in other components.
  */
 @Component
-public class SecurityConfiguration<T> {
+public class SecurityConfiguration {
 
     /**
      * Asymmetric <Public,Private> key pair for the client service.
@@ -34,8 +33,13 @@ public class SecurityConfiguration<T> {
     /**
      * Cipher objects for encryption and decryption
      */
-    private final Cipher symmetricCipher;
-    private final Cipher asymmetricCipher;
+    private final Cipher symmetricCipher = Cipher.getInstance(SYMMETRIC_TRANSFORMATION_ALGORITHM);
+    private final Cipher asymmetricCipher = Cipher.getInstance(ASYMMETRIC_TRANSFORMATION_ALGORITHM);
+
+    /**
+     * MessageDigest object to generate the hashes of an array of bytes representing the data.
+     */
+    private final MessageDigest messageDigest = MessageDigest.getInstance(DIGEST_ALGORITHM);
 
 
     /**
@@ -45,16 +49,20 @@ public class SecurityConfiguration<T> {
      * @see com.sec.project.utils.Constants
      */
     @Autowired
-    public SecurityConfiguration() throws NoSuchAlgorithmException, NoSuchPaddingException {
-        this.symmetricCipher = Cipher.getInstance(SYMMETRIC_TRANSFORMATION_ALGORITHM);
-        this.asymmetricCipher = Cipher.getInstance(ASYMMETRIC_TRANSFORMATION_ALGORITHM);
+    public SecurityConfiguration() throws Exception {
         KeyPairGenerator generator = KeyPairGenerator.getInstance(ASYMMETRIC_ALGORITHM);
         SecureRandom random = SecureRandom.getInstance("SHA1PRNG");
         generator.initialize(ASYMMETRIC_KEY_SIZE, random);
         this.keyPair = generator.generateKeyPair();
     }
 
-    public PublicKey bytesArrayToPublicKey(byte[] bytes) throws NoSuchAlgorithmException, InvalidKeySpecException {
+    /**
+     * Conversion of a byte array to a public key object.
+     *
+     * @param bytes containing the key.
+     * @return public key from the byte array.
+     */
+    public PublicKey bytesArrayToPublicKey(byte[] bytes) throws Exception {
         return KeyFactory.getInstance(ASYMMETRIC_ALGORITHM).generatePublic(new X509EncodedKeySpec(bytes));
     }
 
@@ -168,6 +176,17 @@ public class SecurityConfiguration<T> {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * Generates a hash string for a given array of bytes.
+     *
+     * @param data object converted to a byte array.
+     * @return string representing the SHA-256 hash.
+     */
+    public String generateMessageDigest(byte[] data) {
+        messageDigest.update(data);
+        return Base64.getEncoder().encodeToString(messageDigest.digest());
     }
 
 }
