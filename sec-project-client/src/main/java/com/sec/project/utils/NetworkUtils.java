@@ -12,6 +12,8 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.List;
 
 import static com.sec.project.utils.Constants.MAX_BUFFER_SIZE;
 
@@ -26,14 +28,12 @@ public class NetworkUtils<T> {
 
     private final Gson gson;
     private final Connection connection;
-    private final StaticNodeConfiguration staticNodeConfiguration;
     private final SecurityConfiguration<byte[]> securityConfiguration;
 
     @Autowired
-    public NetworkUtils(Gson gson, Connection connection, StaticNodeConfiguration staticNodeConfiguration, SecurityConfiguration<byte[]> securityConfiguration) {
+    public NetworkUtils(Gson gson, Connection connection, SecurityConfiguration<byte[]> securityConfiguration) {
         this.gson = gson;
         this.connection = connection;
-        this.staticNodeConfiguration = staticNodeConfiguration;
         this.securityConfiguration = securityConfiguration;
     }
 
@@ -46,8 +46,7 @@ public class NetworkUtils<T> {
     public void sendMessage(T object) {
         byte[] bytes = gson.toJson(object).getBytes();
         MessageTransferObject message = new MessageTransferObject(bytes, securityConfiguration.signMessage(bytes));
-        System.out.println(gson.toJson(message));
-        staticNodeConfiguration.ports.forEach(port -> deliverPacket(gson.toJson(message).getBytes(), port));
+        StaticNodeConfiguration.ports.forEach(port -> deliverPacket(gson.toJson(message).getBytes(), port));
     }
 
     /**
@@ -58,14 +57,27 @@ public class NetworkUtils<T> {
      */
     public T receiveResponse(Class<T> objectClass) {
         byte[] buffer = new byte[MAX_BUFFER_SIZE];
-        DatagramPacket dataReceived = new DatagramPacket(buffer, buffer.length);
-        try (DatagramSocket socket = connection.datagramSocket()) {
-            socket.receive(dataReceived);
-            MessageTransferObject response = gson.fromJson(new String(buffer), MessageTransferObject.class);
-            return gson.fromJson(new String(response.data()), objectClass);
+        try {
+            DatagramPacket dataReceived = new DatagramPacket(buffer, buffer.length);
+            connection.datagramSocket().receive(dataReceived);
+            MessageTransferObject response = gson.fromJson(new String(buffer).trim(), MessageTransferObject.class);
+            return gson.fromJson(new String(response.data()).trim(), objectClass);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * Method that handles a quorum of responses for a specified class.
+     *
+     * @param objectClass required to allow the recovery of the original object type.
+     * @return the Object, of which the class is passed as an argument.
+     */
+    public T receiveQuorumResponse(Class<T> objectClass) {
+        List<T> responses = new ArrayList<>();
+        while (responses.size() != StaticNodeConfiguration.getQuorum())
+            responses.add(receiveResponse(objectClass));
+        return responses.get(0);
     }
 
     /**

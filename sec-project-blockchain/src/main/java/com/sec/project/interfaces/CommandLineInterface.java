@@ -15,6 +15,8 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Optional;
 
+import static com.sec.project.infrastructure.repositories.ConsensusServiceImplementation.blockchainTransactions;
+
 /**
  * Spring Shell Component that allows a more interactive way of the user to communicate, providing custom commands defined
  * bellow.
@@ -56,6 +58,14 @@ public class CommandLineInterface {
     public void start() throws Exception {
         logger.info("Started the Key Exchange and IBFT protocol.");
         consensusService.start(Optional.empty());
+    }
+
+    /**
+     * Prints the Messages Stored in the Blockchain at a given moment.
+     */
+    @ShellMethod("Print Blockchain Values to the Console.")
+    public void print() {
+        blockchainTransactions.queue().forEach(System.out::println);
     }
 
     /**

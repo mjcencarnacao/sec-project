@@ -1,6 +1,7 @@
 package com.sec.project.interfaces;
 
 import com.sec.project.domain.models.Message;
+import com.sec.project.domain.usecases.ReceiveResponseUseCase;
 import com.sec.project.domain.usecases.SendMessageUseCase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.shell.standard.ShellComponent;
@@ -17,11 +18,13 @@ import java.util.logging.Logger;
 public class CommandLineInterface {
 
     private final SendMessageUseCase sendMessageUseCase;
+    private final ReceiveResponseUseCase receiveResponseUseCase;
     private final Logger logger = Logger.getLogger(CommandLineInterface.class.getName());
 
     @Autowired
-    public CommandLineInterface(SendMessageUseCase sendMessageUseCase) {
+    public CommandLineInterface(SendMessageUseCase sendMessageUseCase, ReceiveResponseUseCase receiveResponseUseCase) {
         this.sendMessageUseCase = sendMessageUseCase;
+        this.receiveResponseUseCase = receiveResponseUseCase;
     }
 
     /**
@@ -34,7 +37,7 @@ public class CommandLineInterface {
     public void append(@ShellOption(value = "-s", defaultValue = "") String message) {
         logger.info(String.format("Client sent message with value %s", message));
         sendMessageUseCase.execute(new Message(message));
-
+        receiveResponseUseCase.execute();
     }
 
     /**

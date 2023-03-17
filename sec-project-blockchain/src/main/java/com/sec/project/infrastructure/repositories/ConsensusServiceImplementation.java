@@ -1,6 +1,7 @@
 package com.sec.project.infrastructure.repositories;
 
 import com.google.gson.Gson;
+import com.sec.project.domain.models.enums.SendingMethod;
 import com.sec.project.domain.models.records.Message;
 import com.sec.project.domain.models.records.MessageTransferObject;
 import com.sec.project.domain.models.records.Queue;
@@ -12,6 +13,7 @@ import com.sec.project.domain.usecases.consensus.SendPrePrepareMessageConsensusU
 import com.sec.project.domain.usecases.consensus.SendPrepareMessageConsensusUseCase;
 import com.sec.project.infrastructure.annotations.FlushUDPBuffer;
 import com.sec.project.utils.NetworkUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,12 +31,13 @@ import static com.sec.project.domain.models.enums.MessageType.*;
 @Service
 public class ConsensusServiceImplementation implements ConsensusService {
 
+    private int clientPort;
     private long round = 1;
     private final Gson gson;
     private final NetworkUtils<Message> networkUtils;
     private final KeyExchangeService keyExchangeService;
-    private final Queue blockchainTransactions = new Queue();
     private final ConsensusUseCaseCollection useCaseCollection;
+    public static final Queue blockchainTransactions = new Queue();
     private final Logger logger = LoggerFactory.getLogger(ConsensusServiceImplementation.class);
 
     @Autowired
@@ -56,7 +59,9 @@ public class ConsensusServiceImplementation implements ConsensusService {
         if (message.isPresent())
             handleMessageTypes(message.get());
         else {
-            Message response = gson.fromJson(new String(networkUtils.receiveResponse(true).right.data()).trim(), Message.class);
+            ImmutablePair<Integer, MessageTransferObject> responseObject = networkUtils.receiveResponse(true);
+            Message response = gson.fromJson(new String(responseObject.right.data()).trim(), Message.class);
+            clientPort = responseObject.left;
             keyExchangeService.exchangeKeys();
             handleMessageTypes(response);
         }
@@ -112,6 +117,7 @@ public class ConsensusServiceImplementation implements ConsensusService {
     public void decide(Message message) {
         blockchainTransactions.queue().add(message);
         logger.info("Added to the blockchain with value: " + message.value());
+        networkUtils.sendMessage(message, SendingMethod.UNICAST, Optional.of(clientPort), true);
         round = 1;
         start(Optional.empty());
     }
