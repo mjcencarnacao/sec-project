@@ -2,9 +2,11 @@ package com.sec.project.utils;
 
 import com.google.gson.Gson;
 import com.sec.project.domain.models.enums.SendingMethod;
+import com.sec.project.domain.models.records.MessageTransferObject;
+import com.sec.project.infrastructure.configuration.SecurityConfiguration;
 import com.sec.project.infrastructure.configuration.StaticNodeConfiguration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -13,7 +15,10 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.sec.project.interfaces.CommandLineInterface.self;
 import static com.sec.project.utils.Constants.MAX_BUFFER_SIZE;
@@ -28,13 +33,12 @@ import static com.sec.project.utils.Constants.MAX_BUFFER_SIZE;
 public class NetworkUtils<T> {
 
     private final Gson gson;
-    private final StaticNodeConfiguration staticNodeConfiguration;
-    private final Logger logger = LoggerFactory.getLogger(NetworkUtils.class);
+    private final SecurityConfiguration securityConfiguration;
 
     @Autowired
-    public NetworkUtils(Gson gson, StaticNodeConfiguration staticNodeConfiguration) {
+    public NetworkUtils(Gson gson, SecurityConfiguration securityConfiguration) {
         this.gson = gson;
-        this.staticNodeConfiguration = staticNodeConfiguration;
+        this.securityConfiguration = securityConfiguration;
     }
 
     /**
@@ -45,11 +49,13 @@ public class NetworkUtils<T> {
      * @param receiver      optional parameter specifying the receiver if the sending method is a UNICAST.
      * @throws IllegalArgumentException for unknown sending methods.
      */
-    public void sendMessage(T object, SendingMethod sendingMethod, Optional<Integer> receiver) {
-        byte[] bytes = gson.toJson(object).getBytes();
+    public void sendMessage(T object, SendingMethod sendingMethod, Optional<Integer> receiver, boolean encryptionDisabled) {
+        byte[] objectBytes = gson.toJson(object).getBytes();
+        MessageTransferObject message = new MessageTransferObject(objectBytes);
+        byte[] encryptedBytes = encryptionDisabled ? gson.toJson(message).getBytes() : securityConfiguration.symmetricEncoding(gson.toJson(message).getBytes());
         switch (sendingMethod) {
-            case UNICAST -> receiver.ifPresent(integer -> createPacketForDelivery(bytes, integer));
-            case BROADCAST -> staticNodeConfiguration.ports.forEach(port -> createPacketForDelivery(bytes, port));
+            case UNICAST -> receiver.ifPresent(integer -> createPacketForDelivery(encryptedBytes, integer));
+            case BROADCAST -> StaticNodeConfiguration.ports.forEach(port -> createPacketForDelivery(encryptedBytes, port));
             default -> throw new IllegalArgumentException(String.format("Unknown value %s", sendingMethod.name()));
         }
     }
@@ -57,21 +63,32 @@ public class NetworkUtils<T> {
     /**
      * Method that handles logic for receiving responses from remote nodes.
      *
-     * @param objectClass required to allow the recovery of the original object type.
      * @return the Object, of which the class is passed as an argument.
      * @throws RuntimeException in case of any Input/Output errors.
      */
-    public T receiveResponse(Class<T> objectClass) {
+    public ImmutablePair<Integer, MessageTransferObject> receiveResponse(boolean encryptionDisabled) {
         byte[] buffer = new byte[MAX_BUFFER_SIZE];
         try {
             DatagramSocket socket = self.getConnection().datagramSocket();
             DatagramPacket dataReceived = new DatagramPacket(buffer, buffer.length);
             socket.receive(dataReceived);
-            System.out.println(gson.fromJson(new String(buffer).trim(), objectClass));
-            return gson.fromJson(new String(buffer).trim(), objectClass);
+            byte[] decryptedBytes = encryptionDisabled ? buffer : securityConfiguration.symmetricDecoding(new String(addPadding(new String(buffer).trim().getBytes())).getBytes());
+            return new ImmutablePair<>(dataReceived.getPort(), gson.fromJson(new String(decryptedBytes).trim(), MessageTransferObject.class));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * Add padding to encrypted messages in order for the blocks be dividable by 16.
+     *
+     * @param input message that requires padding.
+     * @return padded message.
+     */
+    private byte[] addPadding(byte[] input) {
+        int paddingSize = 0;
+        while (input.length + paddingSize % 16 != 0) paddingSize++;
+        return StringUtils.rightPad(new String(input), paddingSize, " ").getBytes();
     }
 
     /**
@@ -80,11 +97,16 @@ public class NetworkUtils<T> {
      * @param objectClass required to allow the recovery of the original object type.
      * @return the Object, of which the class is passed as an argument.
      */
-    public List<T> receiveQuorumResponse(Class<T> objectClass) {
+    public T receiveQuorumResponse(Class<T> objectClass) {
         List<T> responses = new ArrayList<>();
-        while (responses.size() != staticNodeConfiguration.getQuorum())
-            responses.add(receiveResponse(objectClass));
-        return responses;
+        List<String> hashes = new ArrayList<>();
+        while (responses.size() != StaticNodeConfiguration.ports.size())
+            responses.add(gson.fromJson(new String(receiveResponse(true).right.data()).trim(), objectClass));
+        responses.forEach(response -> hashes.add(securityConfiguration.generateMessageDigest(gson.toJson(response).getBytes())));
+        long x = hashes.stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting())).entrySet().stream().max(Map.Entry.comparingByValue()).get().getValue();
+        System.out.println(x);
+        if (x >= StaticNodeConfiguration.getQuorum()) return responses.get(0);
+        return null;
     }
 
     /**

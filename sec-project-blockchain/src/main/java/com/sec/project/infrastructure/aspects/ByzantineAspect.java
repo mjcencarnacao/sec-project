@@ -43,7 +43,7 @@ public class ByzantineAspect {
     @Around("@annotation(com.sec.project.infrastructure.annotations.Byzantine) && args(message)")
     public Object execute(ProceedingJoinPoint join, Message message) throws Throwable {
         if (self.getMode().isByzantine()) {
-            networkUtils.sendMessage(self.craftByzantineMessage(message), SendingMethod.BROADCAST, Optional.empty());
+            networkUtils.sendMessage(self.craftByzantineMessage(message), SendingMethod.BROADCAST, Optional.empty(), true);
             logger.info("Node sent Byzantine message.");
             return null;
         }

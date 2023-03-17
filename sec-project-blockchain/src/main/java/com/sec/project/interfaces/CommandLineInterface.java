@@ -13,7 +13,7 @@ import org.springframework.shell.standard.ShellOption;
 
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.util.concurrent.ExecutionException;
+import java.util.Optional;
 
 /**
  * Spring Shell Component that allows a more interactive way of the user to communicate, providing custom commands defined
@@ -53,9 +53,9 @@ public class CommandLineInterface {
      * The method can be executed in the command line by writing: init
      */
     @ShellMethod("Start the Consensus service.")
-    public void start() throws ExecutionException, InterruptedException {
-        logger.info("Started IBFT protocol.");
-        consensusService.start();
+    public void start() throws Exception {
+        logger.info("Started the Key Exchange and IBFT protocol.");
+        consensusService.start(Optional.empty());
     }
 
     /**

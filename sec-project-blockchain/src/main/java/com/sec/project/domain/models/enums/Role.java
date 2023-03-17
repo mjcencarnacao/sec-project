@@ -14,4 +14,5 @@ public enum Role {
     public boolean isMember() {
         return this == MEMBER;
     }
+
 }

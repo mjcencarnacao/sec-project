@@ -1,4 +1,4 @@
-package com.sec.project.infrastructure.configuration;
+package com.sec.project.utils;
 
 import jakarta.validation.constraints.NotNull;
 import org.springframework.stereotype.Component;

@@ -1,4 +1,4 @@
-package com.sec.project.domain.usecases;
+package com.sec.project.domain.usecases.consensus;
 
 import com.sec.project.domain.models.enums.SendingMethod;
 import com.sec.project.domain.models.records.Message;
@@ -17,20 +17,20 @@ import java.util.Optional;
  * @see NetworkUtils
  */
 @Service
-public class SendPrepareMessageUseCase implements UseCase {
+public class SendPrepareMessageConsensusUseCase implements ConsensusUseCase {
 
     private final NetworkUtils<Message> networkUtils;
-    private final Logger logger = LoggerFactory.getLogger(SendPrepareMessageUseCase.class);
+    private final Logger logger = LoggerFactory.getLogger(SendPrepareMessageConsensusUseCase.class);
 
     @Autowired
-    public SendPrepareMessageUseCase(NetworkUtils<Message> networkUtils) {
+    public SendPrepareMessageConsensusUseCase(NetworkUtils<Message> networkUtils) {
         this.networkUtils = networkUtils;
     }
 
     @Override
     @Byzantine
     public void execute(Message message) {
-        networkUtils.sendMessage(message, SendingMethod.BROADCAST, Optional.empty());
+        networkUtils.sendMessage(message, SendingMethod.BROADCAST, Optional.empty(), true);
         logger.info(String.format("Member sent a Prepare for message with ID: %d", message.id()));
     }
 }
