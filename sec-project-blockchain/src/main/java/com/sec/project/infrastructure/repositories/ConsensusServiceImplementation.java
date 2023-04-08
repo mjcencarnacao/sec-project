@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 import static com.sec.project.domain.models.enums.MessageType.*;
+import static com.sec.project.infrastructure.configuration.StaticNodeConfiguration.LEADER_PORT;
 
 /**
  * ConsensusServiceImplementation that follows the defined ConsensusService contract.
@@ -98,8 +99,11 @@ public class ConsensusServiceImplementation implements ConsensusService {
     public void sendPrePrepareMessage(Message received) {
         Message message = new Message(PRE_PREPARE, received.id(), round, received.value());
         useCaseCollection.sendPrePrepareMessageUseCase().execute(message);
-        MessageTransferObject response = networkUtils.receiveResponse().right;
-        handleMessageTypes(gson.fromJson(new String(response.data()).trim(), Message.class));
+        ImmutablePair<Integer, MessageTransferObject> response = networkUtils.receiveResponse();
+        if (response.left == LEADER_PORT)
+            handleMessageTypes(gson.fromJson(new String(response.right.data()).trim(), Message.class));
+        else
+            start(Optional.empty());
     }
 
     /**

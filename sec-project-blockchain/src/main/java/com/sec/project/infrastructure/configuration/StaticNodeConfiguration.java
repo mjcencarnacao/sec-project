@@ -22,6 +22,10 @@ import static com.sec.project.utils.Constants.ASYMMETRIC_ALGORITHM;
 public class StaticNodeConfiguration {
 
     /**
+     * Leader Port.
+     */
+    public static final int LEADER_PORT = 4000;
+    /**
      * Static Ports for different nodes.
      */
     public static final List<Integer> ports = Arrays.asList(4000, 4001, 4002, 4003);
