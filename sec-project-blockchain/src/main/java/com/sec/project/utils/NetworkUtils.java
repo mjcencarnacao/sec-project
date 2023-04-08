@@ -5,7 +5,6 @@ import com.sec.project.domain.models.enums.SendingMethod;
 import com.sec.project.domain.models.records.MessageTransferObject;
 import com.sec.project.infrastructure.configuration.SecurityConfiguration;
 import com.sec.project.infrastructure.configuration.StaticNodeConfiguration;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -21,6 +20,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.sec.project.infrastructure.configuration.StaticNodeConfiguration.publicKeyHashMap;
 import static com.sec.project.interfaces.CommandLineInterface.self;
 import static com.sec.project.utils.Constants.MAX_BUFFER_SIZE;
 
@@ -50,13 +50,12 @@ public class NetworkUtils<T> {
      * @param receiver      optional parameter specifying the receiver if the sending method is a UNICAST.
      * @throws IllegalArgumentException for unknown sending methods.
      */
-    public void sendMessage(T object, SendingMethod sendingMethod, Optional<Integer> receiver, boolean encryptionDisabled) {
+    public void sendMessage(T object, SendingMethod sendingMethod, Optional<Integer> receiver) {
         byte[] objectBytes = gson.toJson(object).getBytes();
-        MessageTransferObject message = new MessageTransferObject(objectBytes);
-        byte[] encryptedBytes = encryptionDisabled ? gson.toJson(message).getBytes() : securityConfiguration.symmetricEncoding(gson.toJson(message).getBytes());
+        byte[] message = gson.toJson(new MessageTransferObject(objectBytes, securityConfiguration.signMessage(objectBytes))).getBytes();
         switch (sendingMethod) {
-            case UNICAST -> receiver.ifPresent(integer -> createPacketForDelivery(encryptedBytes, integer));
-            case BROADCAST -> StaticNodeConfiguration.ports.forEach(port -> createPacketForDelivery(encryptedBytes, port));
+            case UNICAST -> receiver.ifPresent(integer -> createPacketForDelivery(message, integer));
+            case BROADCAST -> StaticNodeConfiguration.ports.forEach(port -> createPacketForDelivery(message, port));
             default -> throw new IllegalArgumentException(String.format("Unknown value %s", sendingMethod.name()));
         }
     }
@@ -67,29 +66,19 @@ public class NetworkUtils<T> {
      * @return the Object, of which the class is passed as an argument.
      * @throws RuntimeException in case of any Input/Output errors.
      */
-    public ImmutablePair<Integer, MessageTransferObject> receiveResponse(boolean encryptionDisabled) {
+    public ImmutablePair<Integer, MessageTransferObject> receiveResponse() {
         byte[] buffer = new byte[MAX_BUFFER_SIZE];
         try {
             DatagramSocket socket = self.getConnection().datagramSocket();
             DatagramPacket dataReceived = new DatagramPacket(buffer, buffer.length);
             socket.receive(dataReceived);
-            byte[] decryptedBytes = encryptionDisabled ? buffer : securityConfiguration.symmetricDecoding(new String(addPadding(new String(buffer).trim().getBytes())).getBytes());
-            return new ImmutablePair<>(dataReceived.getPort(), gson.fromJson(new String(decryptedBytes).trim(), MessageTransferObject.class));
+            MessageTransferObject message = gson.fromJson(new String(buffer).trim(), MessageTransferObject.class);
+            if (securityConfiguration.verifySignature(publicKeyHashMap.get(dataReceived.getPort()), message.data(), message.signature()))
+                return new ImmutablePair<>(dataReceived.getPort(), message);
+            return new ImmutablePair<>(dataReceived.getPort(), message);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    /**
-     * Add padding to encrypted messages in order for the blocks be dividable by 16.
-     *
-     * @param input message that requires padding.
-     * @return padded message.
-     */
-    private byte[] addPadding(byte[] input) {
-        int paddingSize = 0;
-        while (input.length + paddingSize % 16 != 0) paddingSize++;
-        return StringUtils.rightPad(new String(input), paddingSize, " ").getBytes();
     }
 
     /**
@@ -102,7 +91,7 @@ public class NetworkUtils<T> {
         List<T> responses = new ArrayList<>();
         AtomicReference<T> nonByzantineMessage = new AtomicReference<>();
         while (responses.size() != StaticNodeConfiguration.ports.size())
-            responses.add(gson.fromJson(new String(receiveResponse(true).right.data()).trim(), objectClass));
+            responses.add(gson.fromJson(new String(receiveResponse().right.data()).trim(), objectClass));
         responses.forEach(message -> {
             if (securityConfiguration.generateMessageDigest(gson.toJson(message).getBytes()).equals(hasQuorumOfValidMessages(responses)))
                 nonByzantineMessage.set(message);

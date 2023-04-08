@@ -1,10 +1,15 @@
 package com.sec.project.domain.usecases;
 
+import com.sec.project.domain.models.records.Message;
+
 /**
- * Main Contract for the several use cases.
+ * Contract for the several use cases needed to support the projects functionalities.
  *
- * @see com.sec.project.domain.usecases.exchange.ExchangeUseCase
- * @see com.sec.project.domain.usecases.consensus.ConsensusUseCase
+ * @see SendRoundChangeUseCase
+ * @see SendCommitMessageUseCase
+ * @see SendPrepareMessageUseCase
+ * @see SendPrePrepareMessageUseCase
  */
 public interface UseCase {
+    void execute(Message message);
 }

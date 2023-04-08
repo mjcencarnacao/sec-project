@@ -4,6 +4,7 @@ import com.sec.project.domain.models.enums.Mode;
 import com.sec.project.domain.models.enums.Role;
 import com.sec.project.domain.models.valueobjects.Node;
 import com.sec.project.domain.repositories.ConsensusService;
+import com.sec.project.infrastructure.configuration.SecurityConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,7 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Optional;
 
+import static com.sec.project.infrastructure.configuration.StaticNodeConfiguration.getPublicKeysFromFile;
 import static com.sec.project.infrastructure.repositories.ConsensusServiceImplementation.blockchainTransactions;
 
 /**
@@ -26,11 +28,13 @@ public class CommandLineInterface {
 
     public static Node self;
     private final ConsensusService consensusService;
+    private final SecurityConfiguration securityConfiguration;
     private final Logger logger = LoggerFactory.getLogger(CommandLineInterface.class);
 
     @Autowired
-    public CommandLineInterface(ConsensusService consensusService) {
+    public CommandLineInterface(ConsensusService consensusService, SecurityConfiguration securityConfiguration) {
         this.consensusService = consensusService;
+        this.securityConfiguration = securityConfiguration;
     }
 
     /**
@@ -46,6 +50,7 @@ public class CommandLineInterface {
     @ShellMethod("Create a new Node.")
     public void init(@ShellOption(value = "-p") int port, @ShellOption(value = "-r", defaultValue = "MEMBER") Role role, @ShellOption(value = "-m", defaultValue = "REGULAR") Mode mode) throws SocketException, UnknownHostException {
         self = new Node(port, role, mode);
+        securityConfiguration.writePublicKeyToFile();
         logger.info(String.format("Started new Node on Port: %d with role %s", self.getConnection().datagramSocket().getLocalPort(), self.getRole().name()));
     }
 
@@ -55,8 +60,9 @@ public class CommandLineInterface {
      * The method can be executed in the command line by writing: init
      */
     @ShellMethod("Start the Consensus service.")
-    public void start() throws Exception {
+    public void start() {
         logger.info("Started the Key Exchange and IBFT protocol.");
+        getPublicKeysFromFile();
         consensusService.start(Optional.empty());
     }
 

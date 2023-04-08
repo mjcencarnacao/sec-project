@@ -6,12 +6,10 @@ import com.sec.project.domain.models.records.Message;
 import com.sec.project.domain.models.records.MessageTransferObject;
 import com.sec.project.domain.models.records.Queue;
 import com.sec.project.domain.repositories.ConsensusService;
-import com.sec.project.domain.repositories.KeyExchangeService;
-import com.sec.project.domain.usecases.consensus.ConsensusUseCaseCollection;
-import com.sec.project.domain.usecases.consensus.SendCommitMessageConsensusUseCase;
-import com.sec.project.domain.usecases.consensus.SendPrePrepareMessageConsensusUseCase;
-import com.sec.project.domain.usecases.consensus.SendPrepareMessageConsensusUseCase;
-import com.sec.project.infrastructure.annotations.FlushUDPBuffer;
+import com.sec.project.domain.usecases.SendCommitMessageUseCase;
+import com.sec.project.domain.usecases.SendPrePrepareMessageUseCase;
+import com.sec.project.domain.usecases.SendPrepareMessageUseCase;
+import com.sec.project.domain.usecases.UseCaseCollection;
 import com.sec.project.utils.NetworkUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
@@ -35,17 +33,15 @@ public class ConsensusServiceImplementation implements ConsensusService {
     private long round = 1;
     private final Gson gson;
     private final NetworkUtils<Message> networkUtils;
-    private final KeyExchangeService keyExchangeService;
-    private final ConsensusUseCaseCollection useCaseCollection;
+    private final UseCaseCollection useCaseCollection;
     public static final Queue blockchainTransactions = new Queue();
     private final Logger logger = LoggerFactory.getLogger(ConsensusServiceImplementation.class);
 
     @Autowired
-    public ConsensusServiceImplementation(Gson gson, NetworkUtils<Message> networkUtils, ConsensusUseCaseCollection useCaseCollection, KeyExchangeService keyExchangeService) {
+    public ConsensusServiceImplementation(Gson gson, NetworkUtils<Message> networkUtils, UseCaseCollection useCaseCollection) {
         this.gson = gson;
         this.networkUtils = networkUtils;
         this.useCaseCollection = useCaseCollection;
-        this.keyExchangeService = keyExchangeService;
     }
 
     /**
@@ -53,16 +49,14 @@ public class ConsensusServiceImplementation implements ConsensusService {
      * Waits for a client message and sends it to the message handler defined in the service.
      */
     @Override
-    @FlushUDPBuffer(override = true)
     public void start(Optional<Message> message) {
         logger.info("Starting new round for the IBFT algorithm.");
         if (message.isPresent())
             handleMessageTypes(message.get());
         else {
-            ImmutablePair<Integer, MessageTransferObject> responseObject = networkUtils.receiveResponse(true);
+            ImmutablePair<Integer, MessageTransferObject> responseObject = networkUtils.receiveResponse();
             Message response = gson.fromJson(new String(responseObject.right.data()).trim(), Message.class);
             clientPort = responseObject.left;
-            keyExchangeService.exchangeKeys();
             handleMessageTypes(response);
         }
         round++;
@@ -73,7 +67,7 @@ public class ConsensusServiceImplementation implements ConsensusService {
      * After everything is committed a proper decide will take place to ensure the blockchain appends (or not) a given message.
      *
      * @param received previous prepare message.
-     * @see SendCommitMessageConsensusUseCase
+     * @see SendCommitMessageUseCase
      */
     @Override
     public void sendCommitMessage(Message received) {
@@ -85,7 +79,7 @@ public class ConsensusServiceImplementation implements ConsensusService {
      * Method that handles the delivery of the prepared messages to ensure the IBFT protocol integrity.
      *
      * @param received previous pre-prepare message.
-     * @see SendPrepareMessageConsensusUseCase
+     * @see SendPrepareMessageUseCase
      */
     @Override
     public void sendPrepareMessage(Message received) {
@@ -98,13 +92,13 @@ public class ConsensusServiceImplementation implements ConsensusService {
      * Only the Leader can execute this (specified in the use case).
      *
      * @param received client message request.
-     * @see SendPrePrepareMessageConsensusUseCase
+     * @see SendPrePrepareMessageUseCase
      */
     @Override
     public void sendPrePrepareMessage(Message received) {
         Message message = new Message(PRE_PREPARE, received.id(), round, received.value());
         useCaseCollection.sendPrePrepareMessageUseCase().execute(message);
-        MessageTransferObject response = networkUtils.receiveResponse(true).right;
+        MessageTransferObject response = networkUtils.receiveResponse().right;
         handleMessageTypes(gson.fromJson(new String(response.data()).trim(), Message.class));
     }
 
@@ -117,7 +111,7 @@ public class ConsensusServiceImplementation implements ConsensusService {
     public void decide(Message message) {
         blockchainTransactions.queue().add(message);
         logger.info("Added to the blockchain with value: " + message.value());
-        networkUtils.sendMessage(message, SendingMethod.UNICAST, Optional.of(clientPort), true);
+        networkUtils.sendMessage(message, SendingMethod.UNICAST, Optional.of(clientPort));
         round = 1;
         start(Optional.empty());
     }
