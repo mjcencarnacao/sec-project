@@ -48,6 +48,7 @@ public class SecurityConfiguration {
         SecureRandom random = SecureRandom.getInstance("SHA1PRNG");
         generator.initialize(ASYMMETRIC_KEY_SIZE, random);
         this.keyPair = generator.generateKeyPair();
+        writePublicKeyToFile();
     }
 
     /**
@@ -68,10 +69,14 @@ public class SecurityConfiguration {
         return keyPair.getPrivate();
     }
 
+    /**
+     * Writes the generated public key to the static destination.
+     */
     public void writePublicKeyToFile() {
         try {
-            new File("keys/client/" + connection.datagramSocket().getLocalPort() + ".pem").createNewFile();
-            Files.write(Path.of("keys/client/" + connection.datagramSocket().getLocalPort() + ".pem"), getPublicKey().getEncoded());
+            int port = connection.datagramSocket().getLocalPort();
+            new File(CLIENT_KEY_STORAGE + port + ".pem").createNewFile();
+            Files.write(Path.of(CLIENT_KEY_STORAGE + port + ".pem"), getPublicKey().getEncoded());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

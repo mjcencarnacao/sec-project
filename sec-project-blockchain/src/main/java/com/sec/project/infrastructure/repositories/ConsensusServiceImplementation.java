@@ -64,13 +64,9 @@ public class ConsensusServiceImplementation implements ConsensusService {
         if (message.isPresent())
             handleMessageTypes(message.get());
         else {
-            ImmutablePair<Integer, MessageTransferObject> responseObject = networkUtils.receiveResponse();
-            Message response = gson.fromJson(new String(responseObject.right.data()).trim(), Message.class);
-            clientPort = responseObject.left;
-            handleMessageTypes(response);
-            while (response.type() == CREATE_ACCOUNT || response.type() == CHECK_BALANCE || response.type() == TRANSFER) {
-                responseObject = networkUtils.receiveResponse();
-                response = gson.fromJson(new String(responseObject.right.data()).trim(), Message.class);
+            while (true) {
+                ImmutablePair<Integer, MessageTransferObject> responseObject = networkUtils.receiveResponse();
+                Message response = gson.fromJson(new String(responseObject.right.data()).trim(), Message.class);
                 clientPort = responseObject.left;
                 handleMessageTypes(response);
             }
@@ -162,12 +158,13 @@ public class ConsensusServiceImplementation implements ConsensusService {
     private void handleMessageTypes(Message message) {
         if (message == null)
             start(Optional.empty());
-        else if (message.type() == null)
+        else if (message.type() == TRANSFER) {
             sendPrePrepareMessage(new Message(null, blockchainTransactions.transactions().size(), round, message.value(), 0, 0));
+            transfer(message);
+        }
         else
             switch (message.type()) {
                 case CREATE_ACCOUNT -> createAccount(message);
-                case TRANSFER -> transfer(message);
                 case CHECK_BALANCE -> checkBalance(message);
                 case PRE_PREPARE -> sendPrepareMessage(message);
                 case PREPARE -> sendCommitMessage(message);

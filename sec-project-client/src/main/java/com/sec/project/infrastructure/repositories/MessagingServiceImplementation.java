@@ -32,7 +32,7 @@ public class MessagingServiceImplementation implements MessagingService {
     @Override
     public void sendMessage(Message message) {
         networkUtils.sendMessage(message);
-        logger.info("Client sent message with value: " + message.value());
+        logger.info("Client sent message with type: " + message.type());
     }
 
     /**
@@ -41,8 +41,7 @@ public class MessagingServiceImplementation implements MessagingService {
     @Override
     public void receiveResponse() {
         Message message = networkUtils.receiveQuorumResponse(Message.class);
-        logger.info("Got: " + message.value());
-        logger.info("Received Quorum of Messages from the Blockchain. Value was appended.");
+        logger.info("Received Quorum of Messages from the Blockchain. Operation Successful. Value: " + message.value());
     }
 
 }

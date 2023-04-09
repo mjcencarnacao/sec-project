@@ -1,19 +1,16 @@
 package com.sec.project.interfaces;
 
-import com.sec.project.domain.models.Message;
-import com.sec.project.domain.usecases.ReceiveResponseUseCase;
-import com.sec.project.domain.usecases.SendMessageUseCase;
-import com.sec.project.infrastructure.configuration.SecurityConfiguration;
+import com.sec.project.domain.usecases.UseCaseCollection;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.shell.standard.ShellComponent;
 import org.springframework.shell.standard.ShellMethod;
-import org.springframework.shell.standard.ShellOption;
 
-import java.util.Optional;
+import java.io.File;
+import java.util.Arrays;
+import java.util.Objects;
 import java.util.logging.Logger;
 
-import static com.sec.project.domain.enums.MessageType.*;
-import static com.sec.project.utils.NetworkUtils.connection;
+import static com.sec.project.utils.Constants.CLIENT_KEY_STORAGE;
 
 /**
  * Spring Shell Component that allows a more interactive way of the user to communicate, providing custom commands defined
@@ -22,45 +19,44 @@ import static com.sec.project.utils.NetworkUtils.connection;
 @ShellComponent
 public class CommandLineInterface {
 
-    private final SendMessageUseCase sendMessageUseCase;
-    private final SecurityConfiguration securityConfiguration;
-    private final ReceiveResponseUseCase receiveResponseUseCase;
+    private final UseCaseCollection useCaseCollection;
     private final Logger logger = Logger.getLogger(CommandLineInterface.class.getName());
 
     @Autowired
-    public CommandLineInterface(SendMessageUseCase sendMessageUseCase, ReceiveResponseUseCase receiveResponseUseCase, SecurityConfiguration securityConfiguration) {
-        this.sendMessageUseCase = sendMessageUseCase;
-        this.securityConfiguration = securityConfiguration;
-        this.receiveResponseUseCase = receiveResponseUseCase;
+    public CommandLineInterface(UseCaseCollection useCaseCollection) {
+        this.useCaseCollection = useCaseCollection;
     }
 
     /**
-     * Console method that allows a client to send a request to append a message to the blockchain.
-     * This command can be issued like the following example: append -s <MESSAGE>
-     *
-     * @param message Message written in the console, that is followed by the -s command, to be sent to the blockchain service.
+     * Console method that allows a client to register in the TES system.
+     * This command can be issued like the following example: create_account
      */
-    @ShellMethod("Append a message to the blockchain.")
-    public void append(@ShellOption(value = "-s", defaultValue = "") String message) {
-        sendMessageUseCase.execute(new Message(null, message, connection.datagramSocket().getLocalPort(), 0));
-        receiveResponseUseCase.execute();
-    }
-
     @ShellMethod(key = "create_account", value = "Create a Client Account.")
     public void createAccount() {
-        securityConfiguration.writePublicKeyToFile();
-        sendMessageUseCase.execute(new Message(CREATE_ACCOUNT, "ok", connection.datagramSocket().getLocalPort(), 0));
+        useCaseCollection.createAccountUseCase().execute();
     }
 
+    /**
+     * Console method that allows a client to send a request to transfer a given amount.
+     * This command can be issued like the following example: transfer -d <DESTINATION> -a <AMOUNT>
+     *
+     * @param identifier port of the destination address, in order to retrieve the public key stored in a static way.
+     * @param amount     to transfer for a given operation.
+     */
     @ShellMethod("Transfer to an Account.")
-    public void transfer(int id, int amount) {
-        sendMessageUseCase.execute(new Message(TRANSFER, String.valueOf(amount), connection.datagramSocket().getLocalPort(), id));
+    public void transfer(int identifier, int amount) {
+        useCaseCollection.transferUseCase().execute(identifier, amount);
     }
 
+    /**
+     * Console method that allows a client to check the balance for a given account.
+     * This command can be issued like the following example: check_balance -d <DESTINATION>
+     *
+     * @param port for the account to check the balance.
+     */
     @ShellMethod(key = "check_balance", value = "Check balance of an Account.")
     public void checkBalance(int port) {
-        sendMessageUseCase.execute(new Message(CHECK_BALANCE, "", port, 0));
-        receiveResponseUseCase.execute();
+        useCaseCollection.checkBalanceUseCase().execute(port);
     }
 
     /**
@@ -69,6 +65,7 @@ public class CommandLineInterface {
     @ShellMethod("Exit the application.")
     public void logout() {
         logger.info("Exit command issued.");
+        Arrays.stream(Objects.requireNonNull(new File(CLIENT_KEY_STORAGE).listFiles())).toList().forEach(File::delete);
         System.exit(0);
     }
 

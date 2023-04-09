@@ -8,7 +8,7 @@ public enum MessageType {
     CREATE_ACCOUNT, TRANSFER, CHECK_BALANCE, PRE_PREPARE, PREPARE, COMMIT, ROUND_CHANGE;
 
     public boolean isConsensusMessage() {
-        return this == PRE_PREPARE || this == PREPARE || this == COMMIT || this == ROUND_CHANGE;
+        return this == PRE_PREPARE || this == PREPARE || this == COMMIT || this == ROUND_CHANGE || this == TRANSFER;
     }
 
 }

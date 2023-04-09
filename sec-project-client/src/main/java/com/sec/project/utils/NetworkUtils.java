@@ -13,6 +13,7 @@ import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.sec.project.infrastructure.configuration.StaticNodeConfiguration.getPublicKeysOfNodesFromFile;
 import static com.sec.project.utils.Constants.MAX_BUFFER_SIZE;
 
 /**
@@ -68,8 +69,10 @@ public class NetworkUtils<T> {
         try {
             DatagramPacket dataReceived = new DatagramPacket(buffer, buffer.length);
             connection.datagramSocket().receive(dataReceived);
-            MessageTransferObject response = gson.fromJson(new String(buffer).trim(), MessageTransferObject.class);
-            return gson.fromJson(new String(response.data()).trim(), objectClass);
+            MessageTransferObject message = gson.fromJson(new String(buffer).trim(), MessageTransferObject.class);
+            if (getPublicKeysOfNodesFromFile().get(dataReceived.getPort()) != null && securityConfiguration.verifySignature(getPublicKeysOfNodesFromFile().get(dataReceived.getPort()), message.data(), message.signature()))
+                return gson.fromJson(new String(message.data()).trim(), objectClass);
+            return gson.fromJson(new String(message.data()).trim(), objectClass);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
