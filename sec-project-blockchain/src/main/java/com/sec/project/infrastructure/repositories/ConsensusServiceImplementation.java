@@ -20,12 +20,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.net.DatagramPacket;
 import java.security.PublicKey;
 import java.util.Optional;
 
 import static com.sec.project.domain.models.enums.MessageType.*;
 import static com.sec.project.infrastructure.configuration.StaticNodeConfiguration.LEADER_PORT;
 import static com.sec.project.infrastructure.configuration.StaticNodeConfiguration.getPublicKeysOfClientFromFile;
+import static com.sec.project.interfaces.CommandLineInterface.clientListener;
+import static com.sec.project.utils.Constants.MAX_BUFFER_SIZE;
 
 /**
  * ConsensusServiceImplementation that follows the defined ConsensusService contract.
@@ -61,14 +65,17 @@ public class ConsensusServiceImplementation implements ConsensusService {
     @Override
     public void start(Optional<Message> message) {
         logger.info("Starting new round for the IBFT algorithm.");
+        new Thread(this::enqueueClientRequests).start();
         if (message.isPresent())
             handleMessageTypes(message.get());
         else {
             while (true) {
-                ImmutablePair<Integer, MessageTransferObject> responseObject = networkUtils.receiveResponse();
-                Message response = gson.fromJson(new String(responseObject.right.data()).trim(), Message.class);
-                clientPort = responseObject.left;
-                handleMessageTypes(response);
+                if (!blockchainTransactions.clientRequests().isEmpty()) {
+                    ImmutablePair<Integer, MessageTransferObject> responseObject = blockchainTransactions.clientRequests().get(0);
+                    Message response = gson.fromJson(new String(responseObject.right.data()).trim(), Message.class);
+                    clientPort = responseObject.left;
+                    handleMessageTypes(response);
+                }
             }
         }
         round++;
@@ -134,6 +141,7 @@ public class ConsensusServiceImplementation implements ConsensusService {
 
     public void createAccount(Message message) {
         tokenExchangeSystemService.createAccount(message.source());
+        blockchainTransactions.clientRequests().remove(0);
     }
 
     public void transfer(Message message) {
@@ -145,6 +153,22 @@ public class ConsensusServiceImplementation implements ConsensusService {
     public void checkBalance(Message message) {
         PublicKey source = getPublicKeysOfClientFromFile().get(message.source());
         networkUtils.sendMessage(new Message(CHECK_BALANCE, 0, 0, String.valueOf(tokenExchangeSystemService.check_balance(source)), 0, 0), SendingMethod.UNICAST, Optional.of(clientPort));
+        blockchainTransactions.clientRequests().remove(0);
+    }
+
+    private void enqueueClientRequests() {
+        while (true) {
+            try {
+                byte[] buffer = new byte[MAX_BUFFER_SIZE];
+                DatagramPacket dataReceived = new DatagramPacket(buffer, buffer.length);
+                clientListener.receive(dataReceived);
+                MessageTransferObject message = gson.fromJson(new String(buffer).trim(), MessageTransferObject.class);
+                blockchainTransactions.clientRequests().add(new ImmutablePair<>(dataReceived.getPort(), message));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
     }
 
     /**
@@ -159,6 +183,7 @@ public class ConsensusServiceImplementation implements ConsensusService {
             blockchainTransactions.queue().add(message);
             transfer(message);
             logger.info("Added to Queue");
+            blockchainTransactions.clientRequests().remove(0);
             if (blockchainTransactions.queue().size() == 5) {
                 Block block = new Block(blockchainTransactions.transactions().size(), blockchainTransactions.queue(), securityConfiguration.generateMessageDigest(gson.toJson(blockchainTransactions.queue()).getBytes()));
                 blockchainTransactions.queue().clear();

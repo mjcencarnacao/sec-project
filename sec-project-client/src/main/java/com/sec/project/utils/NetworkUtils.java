@@ -55,7 +55,7 @@ public class NetworkUtils<T> {
     public void sendMessage(T object) {
         byte[] bytes = gson.toJson(object).getBytes();
         MessageTransferObject message = new MessageTransferObject(bytes, securityConfiguration.signMessage(bytes));
-        StaticNodeConfiguration.ports.forEach(port -> deliverPacket(gson.toJson(message).getBytes(), port));
+        StaticNodeConfiguration.ports.forEach(port -> deliverPacket(gson.toJson(message).getBytes(), port + 1000));
     }
 
     /**

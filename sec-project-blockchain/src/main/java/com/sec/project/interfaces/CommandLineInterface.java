@@ -12,6 +12,7 @@ import org.springframework.shell.standard.ShellComponent;
 import org.springframework.shell.standard.ShellMethod;
 import org.springframework.shell.standard.ShellOption;
 
+import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Optional;
@@ -27,6 +28,7 @@ import static com.sec.project.infrastructure.repositories.ConsensusServiceImplem
 public class CommandLineInterface {
 
     public static Node self;
+    public static DatagramSocket clientListener;
     private final ConsensusService consensusService;
     private final SecurityConfiguration securityConfiguration;
     private final Logger logger = LoggerFactory.getLogger(CommandLineInterface.class);
@@ -50,6 +52,7 @@ public class CommandLineInterface {
     @ShellMethod("Create a new Node.")
     public void init(@ShellOption(value = "-p") int port, @ShellOption(value = "-r", defaultValue = "MEMBER") Role role, @ShellOption(value = "-m", defaultValue = "REGULAR") Mode mode) throws SocketException, UnknownHostException {
         self = new Node(port, role, mode);
+        clientListener = new DatagramSocket(port + 1000);
         securityConfiguration.writePublicKeyToFile();
         logger.info(String.format("Started new Node on Port: %d with role %s", self.getConnection().datagramSocket().getLocalPort(), self.getRole().name()));
     }
