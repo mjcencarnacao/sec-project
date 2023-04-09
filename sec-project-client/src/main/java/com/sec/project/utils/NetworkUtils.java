@@ -9,9 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,13 +25,23 @@ import static com.sec.project.utils.Constants.MAX_BUFFER_SIZE;
 public class NetworkUtils<T> {
 
     private final Gson gson;
-    private final Connection connection;
-    private final SecurityConfiguration<byte[]> securityConfiguration;
+    public static final Connection connection;
+
+    static {
+        try {
+            connection = new Connection();
+        } catch (UnknownHostException e) {
+            throw new RuntimeException(e);
+        } catch (SocketException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private final SecurityConfiguration securityConfiguration;
 
     @Autowired
-    public NetworkUtils(Gson gson, Connection connection, SecurityConfiguration<byte[]> securityConfiguration) {
+    public NetworkUtils(Gson gson, SecurityConfiguration securityConfiguration) {
         this.gson = gson;
-        this.connection = connection;
         this.securityConfiguration = securityConfiguration;
     }
 

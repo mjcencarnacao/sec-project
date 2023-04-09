@@ -11,6 +11,7 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 
 import static com.sec.project.utils.Constants.ASYMMETRIC_ALGORITHM;
 
@@ -44,11 +45,14 @@ public class StaticNodeConfiguration {
         return 2 * faultyNodes + 1;
     }
 
-    public static HashMap<Integer, PublicKey> publicKeyHashMap = new HashMap<>();
-
-    public static void getPublicKeysFromFile(){
-        Arrays.stream(new File("sec-project-blockchain/keys/").listFiles()).toList().forEach(
-                file -> {
+    /**
+     * Retrieves the most recent Public Keys stored in the Shared directory.
+     *
+     * @return HashMap<Integer, PublicKey> mapping ports to public keys
+     */
+    public static HashMap<Integer, PublicKey> getPublicKeysOfNodesFromFile() {
+        HashMap<Integer, PublicKey> publicKeyHashMap = new HashMap<>();
+        Arrays.stream(Objects.requireNonNull(new File("keys/blockchain/").listFiles())).toList().forEach(file -> {
                     try {
                         publicKeyHashMap.put(Integer.parseInt(file.getName().split("\\.")[0]), bytesArrayToPublicKey(Files.readAllBytes(file.toPath())));
                     } catch (Exception e) {
@@ -56,6 +60,20 @@ public class StaticNodeConfiguration {
                     }
                 }
         );
+        return publicKeyHashMap;
+    }
+
+    public static HashMap<Integer, PublicKey> getPublicKeysOfClientFromFile() {
+        HashMap<Integer, PublicKey> publicKeyHashMap = new HashMap<>();
+        Arrays.stream(Objects.requireNonNull(new File("keys/client/").listFiles())).toList().forEach(file -> {
+                    try {
+                        publicKeyHashMap.put(Integer.parseInt(file.getName().split("\\.")[0]), bytesArrayToPublicKey(Files.readAllBytes(file.toPath())));
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+        );
+        return publicKeyHashMap;
     }
 
     /**

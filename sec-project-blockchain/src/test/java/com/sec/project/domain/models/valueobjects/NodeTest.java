@@ -1,6 +1,5 @@
 package com.sec.project.domain.models.valueobjects;
 
-import com.sec.project.domain.models.enums.MessageType;
 import com.sec.project.domain.models.enums.Mode;
 import com.sec.project.domain.models.enums.Role;
 import com.sec.project.domain.models.records.Message;

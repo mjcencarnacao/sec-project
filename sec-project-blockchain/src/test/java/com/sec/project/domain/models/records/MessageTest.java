@@ -1,6 +1,5 @@
 package com.sec.project.domain.models.records;
 
-import com.sec.project.domain.models.enums.MessageType;
 import org.junit.jupiter.api.Test;
 
 import static org.hibernate.validator.internal.util.Contracts.assertNotNull;

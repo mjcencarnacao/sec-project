@@ -10,5 +10,5 @@ import com.sec.project.domain.models.enums.MessageType;
  * @param round of the IBFT consensus algorithm.
  * @param value to be appended to the blockchain.
  */
-public record Message(MessageType type, long id, long round, String value) {
+public record Message(MessageType type, long id, long round, String value, int source, int destination) {
 }

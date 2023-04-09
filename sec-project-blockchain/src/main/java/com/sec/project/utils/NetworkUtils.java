@@ -6,22 +6,23 @@ import com.sec.project.domain.models.records.MessageTransferObject;
 import com.sec.project.infrastructure.configuration.SecurityConfiguration;
 import com.sec.project.infrastructure.configuration.StaticNodeConfiguration;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static com.sec.project.infrastructure.configuration.StaticNodeConfiguration.publicKeyHashMap;
+import static com.sec.project.infrastructure.configuration.StaticNodeConfiguration.getPublicKeysOfNodesFromFile;
+import static com.sec.project.infrastructure.configuration.StaticNodeConfiguration.ports;
 import static com.sec.project.interfaces.CommandLineInterface.self;
+import static com.sec.project.utils.Constants.DEFAULT_TIMEOUT;
 import static com.sec.project.utils.Constants.MAX_BUFFER_SIZE;
 
 /**
@@ -35,6 +36,8 @@ public class NetworkUtils<T> {
 
     private final Gson gson;
     private final SecurityConfiguration securityConfiguration;
+    private final Logger logger = LoggerFactory.getLogger(NetworkUtils.class);
+    private final HashMap<Integer, DatagramPacket> packetRecordQueue = new HashMap<>();
 
     @Autowired
     public NetworkUtils(Gson gson, SecurityConfiguration securityConfiguration) {
@@ -72,11 +75,12 @@ public class NetworkUtils<T> {
             DatagramSocket socket = self.getConnection().datagramSocket();
             DatagramPacket dataReceived = new DatagramPacket(buffer, buffer.length);
             socket.receive(dataReceived);
+            packetRecordQueue.remove(dataReceived.getPort());
             MessageTransferObject message = gson.fromJson(new String(buffer).trim(), MessageTransferObject.class);
-            if (securityConfiguration.verifySignature(publicKeyHashMap.get(dataReceived.getPort()), message.data(), message.signature()))
+            if (getPublicKeysOfNodesFromFile().get(dataReceived.getPort()) != null && securityConfiguration.verifySignature(getPublicKeysOfNodesFromFile().get(dataReceived.getPort()), message.data(), message.signature()))
                 return new ImmutablePair<>(dataReceived.getPort(), message);
             return new ImmutablePair<>(dataReceived.getPort(), message);
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
@@ -89,6 +93,7 @@ public class NetworkUtils<T> {
      */
     public T receiveQuorumResponse(Class<T> objectClass) {
         List<T> responses = new ArrayList<>();
+        new Thread(this::waitForAcknowledges).start();
         AtomicReference<T> nonByzantineMessage = new AtomicReference<>();
         while (responses.size() != StaticNodeConfiguration.ports.size())
             responses.add(gson.fromJson(new String(receiveResponse().right.data()).trim(), objectClass));
@@ -124,9 +129,35 @@ public class NetworkUtils<T> {
             DatagramSocket socket = self.getConnection().datagramSocket();
             DatagramPacket packet = new DatagramPacket(bytes, bytes.length, self.getConnection().address(), port);
             socket.send(packet);
+            if (ports.contains(port)) packetRecordQueue.put(port, packet);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void waitForAcknowledges() {
+        Timer timer = new Timer();
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                if (packetRecordQueue.isEmpty())
+                    timer.cancel();
+                resendPacketsFromRecordQueue();
+            }
+        };
+        timer.scheduleAtFixedRate(task, DEFAULT_TIMEOUT, DEFAULT_TIMEOUT);
+    }
+
+    private void resendPacketsFromRecordQueue() {
+        DatagramSocket socket = self.getConnection().datagramSocket();
+        packetRecordQueue.forEach((port, packet) -> {
+            try {
+                logger.info("Retransmitting packet to port: " + port);
+                socket.send(packet);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
 }

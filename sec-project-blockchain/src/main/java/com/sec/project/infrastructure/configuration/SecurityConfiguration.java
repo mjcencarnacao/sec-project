@@ -4,13 +4,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.*;
-import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
 import static com.sec.project.interfaces.CommandLineInterface.self;
@@ -71,10 +68,10 @@ public class SecurityConfiguration {
         return keyPair.getPrivate();
     }
 
-    public void writePublicKeyToFile(){
+    public void writePublicKeyToFile() {
         try {
-            new File("sec-project-blockchain/keys/" + self.getConnection().datagramSocket().getLocalPort() + ".pem").createNewFile();
-            Files.write(Path.of("sec-project-blockchain/keys/" + self.getConnection().datagramSocket().getLocalPort() + ".pem"),getPublicKey().getEncoded());
+            new File("keys/blockchain/" + self.getConnection().datagramSocket().getLocalPort() + ".pem").createNewFile();
+            Files.write(Path.of("keys/blockchain/" + self.getConnection().datagramSocket().getLocalPort() + ".pem"), getPublicKey().getEncoded());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -98,6 +95,14 @@ public class SecurityConfiguration {
         return null;
     }
 
+    /**
+     * Verifies a signature of messages using AES and RSA.
+     *
+     * @param key               of the sender.
+     * @param data              to that was signed.
+     * @param receivedSignature signature in bytes.
+     * @return boolean checking if a signature is valid or not.
+     */
     public boolean verifySignature(PublicKey key, byte[] data, byte[] receivedSignature) {
         try {
             signature.initVerify(key);

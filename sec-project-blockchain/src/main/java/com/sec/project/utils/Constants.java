@@ -10,6 +10,11 @@ public class Constants {
     public static final String SIGNATURE_VERIFICATION = "SHA256withRSA";
 
     /**
+     * Minimum Transactions per Block
+     */
+    public static int MINIMUM_TRANSACTIONS = 10;
+
+    /**
      * MessagingServiceImplementation Constants
      */
     public static final int MAX_BUFFER_SIZE = 4096;

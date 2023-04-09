@@ -16,7 +16,7 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Optional;
 
-import static com.sec.project.infrastructure.configuration.StaticNodeConfiguration.getPublicKeysFromFile;
+import static com.sec.project.infrastructure.configuration.StaticNodeConfiguration.getPublicKeysOfNodesFromFile;
 import static com.sec.project.infrastructure.repositories.ConsensusServiceImplementation.blockchainTransactions;
 
 /**
@@ -62,7 +62,7 @@ public class CommandLineInterface {
     @ShellMethod("Start the Consensus service.")
     public void start() {
         logger.info("Started the Key Exchange and IBFT protocol.");
-        getPublicKeysFromFile();
+        getPublicKeysOfNodesFromFile();
         consensusService.start(Optional.empty());
     }
 
@@ -71,7 +71,7 @@ public class CommandLineInterface {
      */
     @ShellMethod("Print Blockchain Values to the Console.")
     public void print() {
-        blockchainTransactions.queue().forEach(System.out::println);
+        blockchainTransactions.transactions().forEach(System.out::println);
     }
 
     /**

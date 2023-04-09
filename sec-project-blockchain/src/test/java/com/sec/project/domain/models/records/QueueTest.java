@@ -1,6 +1,5 @@
 package com.sec.project.domain.models.records;
 
-import com.sec.project.domain.models.enums.MessageType;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,9 +21,9 @@ class QueueTest {
 
     @Test
     public void testQueueMessageStorage() {
-        queue.queue().add(testMessage);
-        assertEquals(1, queue.queue().size());
-        assertEquals(queue.queue().get(0), testMessage);
+        queue.transactions().add(testMessage);
+        assertEquals(1, queue.transactions().size());
+        assertEquals(queue.transactions().get(0), testMessage);
     }
 
 }

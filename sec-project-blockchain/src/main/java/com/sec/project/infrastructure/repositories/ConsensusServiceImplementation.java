@@ -2,14 +2,17 @@ package com.sec.project.infrastructure.repositories;
 
 import com.google.gson.Gson;
 import com.sec.project.domain.models.enums.SendingMethod;
+import com.sec.project.domain.models.records.Block;
 import com.sec.project.domain.models.records.Message;
 import com.sec.project.domain.models.records.MessageTransferObject;
 import com.sec.project.domain.models.records.Queue;
 import com.sec.project.domain.repositories.ConsensusService;
+import com.sec.project.domain.repositories.TokenExchangeSystemService;
 import com.sec.project.domain.usecases.SendCommitMessageUseCase;
 import com.sec.project.domain.usecases.SendPrePrepareMessageUseCase;
 import com.sec.project.domain.usecases.SendPrepareMessageUseCase;
 import com.sec.project.domain.usecases.UseCaseCollection;
+import com.sec.project.infrastructure.configuration.SecurityConfiguration;
 import com.sec.project.utils.NetworkUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
@@ -17,10 +20,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.security.PublicKey;
 import java.util.Optional;
 
 import static com.sec.project.domain.models.enums.MessageType.*;
 import static com.sec.project.infrastructure.configuration.StaticNodeConfiguration.LEADER_PORT;
+import static com.sec.project.infrastructure.configuration.StaticNodeConfiguration.getPublicKeysOfClientFromFile;
 
 /**
  * ConsensusServiceImplementation that follows the defined ConsensusService contract.
@@ -35,14 +40,18 @@ public class ConsensusServiceImplementation implements ConsensusService {
     private final Gson gson;
     private final NetworkUtils<Message> networkUtils;
     private final UseCaseCollection useCaseCollection;
+    private final SecurityConfiguration securityConfiguration;
+    private final TokenExchangeSystemService tokenExchangeSystemService;
     public static final Queue blockchainTransactions = new Queue();
     private final Logger logger = LoggerFactory.getLogger(ConsensusServiceImplementation.class);
 
     @Autowired
-    public ConsensusServiceImplementation(Gson gson, NetworkUtils<Message> networkUtils, UseCaseCollection useCaseCollection) {
+    public ConsensusServiceImplementation(Gson gson, SecurityConfiguration securityConfiguration, TokenExchangeSystemService tokenExchangeSystemService, NetworkUtils<Message> networkUtils, UseCaseCollection useCaseCollection) {
         this.gson = gson;
         this.networkUtils = networkUtils;
         this.useCaseCollection = useCaseCollection;
+        this.securityConfiguration = securityConfiguration;
+        this.tokenExchangeSystemService = tokenExchangeSystemService;
     }
 
     /**
@@ -59,6 +68,12 @@ public class ConsensusServiceImplementation implements ConsensusService {
             Message response = gson.fromJson(new String(responseObject.right.data()).trim(), Message.class);
             clientPort = responseObject.left;
             handleMessageTypes(response);
+            while (response.type() == CREATE_ACCOUNT || response.type() == CHECK_BALANCE || response.type() == TRANSFER) {
+                responseObject = networkUtils.receiveResponse();
+                response = gson.fromJson(new String(responseObject.right.data()).trim(), Message.class);
+                clientPort = responseObject.left;
+                handleMessageTypes(response);
+            }
         }
         round++;
     }
@@ -72,7 +87,7 @@ public class ConsensusServiceImplementation implements ConsensusService {
      */
     @Override
     public void sendCommitMessage(Message received) {
-        useCaseCollection.sendCommitMessageUseCase().execute(new Message(COMMIT, received.id(), round, received.value()));
+        useCaseCollection.sendCommitMessageUseCase().execute(new Message(COMMIT, received.id(), round, received.value(), 0, 0));
         handleMessageTypes(networkUtils.receiveQuorumResponse(Message.class));
     }
 
@@ -84,7 +99,7 @@ public class ConsensusServiceImplementation implements ConsensusService {
      */
     @Override
     public void sendPrepareMessage(Message received) {
-        useCaseCollection.sendPrepareMessageUseCase().execute(new Message(PREPARE, received.id(), round, received.value()));
+        useCaseCollection.sendPrepareMessageUseCase().execute(new Message(PREPARE, received.id(), round, received.value(), 0, 0));
         handleMessageTypes(networkUtils.receiveQuorumResponse(Message.class));
     }
 
@@ -97,7 +112,7 @@ public class ConsensusServiceImplementation implements ConsensusService {
      */
     @Override
     public void sendPrePrepareMessage(Message received) {
-        Message message = new Message(PRE_PREPARE, received.id(), round, received.value());
+        Message message = new Message(PRE_PREPARE, received.id(), round, received.value(), 0, 0);
         useCaseCollection.sendPrePrepareMessageUseCase().execute(message);
         ImmutablePair<Integer, MessageTransferObject> response = networkUtils.receiveResponse();
         if (response.left == LEADER_PORT)
@@ -114,10 +129,29 @@ public class ConsensusServiceImplementation implements ConsensusService {
     @Override
     public void decide(Message message) {
         blockchainTransactions.queue().add(message);
-        logger.info("Added to the blockchain with value: " + message.value());
+        if (blockchainTransactions.queue().size() % 5 == 0) {
+            logger.info("Added new block with ID: " + blockchainTransactions.transactions().size());
+            blockchainTransactions.transactions().add(new Block(blockchainTransactions.transactions().size(), blockchainTransactions.queue(), securityConfiguration.generateMessageDigest(gson.toJson(blockchainTransactions.queue()).getBytes())));
+        }
+        logger.info("Added to the queue with value: " + message.value());
         networkUtils.sendMessage(message, SendingMethod.UNICAST, Optional.of(clientPort));
         round = 1;
         start(Optional.empty());
+    }
+
+    public void createAccount(Message message) {
+        tokenExchangeSystemService.createAccount(message.source());
+    }
+
+    public void transfer(Message message) {
+        PublicKey source = getPublicKeysOfClientFromFile().get(message.source());
+        PublicKey destination = getPublicKeysOfClientFromFile().get(message.destination());
+        tokenExchangeSystemService.transfer(source, destination, Integer.parseInt(message.value()));
+    }
+
+    public void checkBalance(Message message) {
+        PublicKey source = getPublicKeysOfClientFromFile().get(message.source());
+        networkUtils.sendMessage(new Message(CHECK_BALANCE, 0, 0, String.valueOf(tokenExchangeSystemService.check_balance(source)), 0, 0), SendingMethod.UNICAST, Optional.of(clientPort));
     }
 
     /**
@@ -129,9 +163,12 @@ public class ConsensusServiceImplementation implements ConsensusService {
         if (message == null)
             start(Optional.empty());
         else if (message.type() == null)
-            sendPrePrepareMessage(new Message(null, blockchainTransactions.queue().size(), round, message.value()));
+            sendPrePrepareMessage(new Message(null, blockchainTransactions.transactions().size(), round, message.value(), 0, 0));
         else
             switch (message.type()) {
+                case CREATE_ACCOUNT -> createAccount(message);
+                case TRANSFER -> transfer(message);
+                case CHECK_BALANCE -> checkBalance(message);
                 case PRE_PREPARE -> sendPrepareMessage(message);
                 case PREPARE -> sendCommitMessage(message);
                 case COMMIT -> decide(message);
