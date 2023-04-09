@@ -124,12 +124,9 @@ public class ConsensusServiceImplementation implements ConsensusService {
      */
     @Override
     public void decide(Message message) {
-        blockchainTransactions.queue().add(message);
-        if (blockchainTransactions.queue().size() % 5 == 0) {
-            logger.info("Added new block with ID: " + blockchainTransactions.transactions().size());
-            blockchainTransactions.transactions().add(new Block(blockchainTransactions.transactions().size(), blockchainTransactions.queue(), securityConfiguration.generateMessageDigest(gson.toJson(blockchainTransactions.queue()).getBytes())));
-        }
-        logger.info("Added to the queue with value: " + message.value());
+        //blockchainTransactions.queue().add(message);
+        logger.info("Added new block with ID: " + blockchainTransactions.transactions().size());
+        blockchainTransactions.transactions().add(gson.fromJson(message.value(), Block.class));
         networkUtils.sendMessage(message, SendingMethod.UNICAST, Optional.of(clientPort));
         round = 1;
         start(Optional.empty());
@@ -159,10 +156,16 @@ public class ConsensusServiceImplementation implements ConsensusService {
         if (message == null)
             start(Optional.empty());
         else if (message.type() == TRANSFER) {
-            sendPrePrepareMessage(new Message(null, blockchainTransactions.transactions().size(), round, message.value(), 0, 0));
+            blockchainTransactions.queue().add(message);
             transfer(message);
-        }
-        else
+            logger.info("Added to Queue");
+            if (blockchainTransactions.queue().size() == 5) {
+                Block block = new Block(blockchainTransactions.transactions().size(), blockchainTransactions.queue(), securityConfiguration.generateMessageDigest(gson.toJson(blockchainTransactions.queue()).getBytes()));
+                blockchainTransactions.queue().clear();
+                String bytes = gson.toJson(block);
+                sendPrePrepareMessage(new Message(null, blockchainTransactions.transactions().size(), round, bytes, 0, 0));
+            }
+        } else
             switch (message.type()) {
                 case CREATE_ACCOUNT -> createAccount(message);
                 case CHECK_BALANCE -> checkBalance(message);

@@ -26,7 +26,6 @@ public class TransferUseCase {
     public void execute(int destination, int amount) {
         Message transferMessage = new Message(TRANSFER, amount, connection.datagramSocket().getLocalPort(), destination);
         messagingService.sendMessage(transferMessage);
-        messagingService.receiveResponse();
     }
 
 }

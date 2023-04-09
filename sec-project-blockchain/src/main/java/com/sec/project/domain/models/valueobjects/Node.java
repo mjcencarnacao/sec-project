@@ -102,9 +102,12 @@ public class Node {
         enum Action {CHANGE_ROUND, CHANGE_VALUE, CHANGE_ID}
         Action random = Action.values()[new Random().nextInt(Action.values().length)];
         return switch (random) {
-            case CHANGE_ID -> new Message(message.type(), new Random().nextLong(), message.round(), message.value(), 0,0);
-            case CHANGE_ROUND -> new Message(message.type(), message.id(), new Random().nextLong(), message.value(), 0,0);
-            case CHANGE_VALUE -> new Message(message.type(), message.id(), message.round(), BYZANTINE_RANDOM_STRING, 0,0);
+            case CHANGE_ID ->
+                    new Message(message.type(), new Random().nextLong(), message.round(), message.value(), -1, -1);
+            case CHANGE_ROUND ->
+                    new Message(message.type(), message.id(), new Random().nextLong(), message.value(), -1, -1);
+            case CHANGE_VALUE ->
+                    new Message(message.type(), message.id(), message.round(), BYZANTINE_RANDOM_STRING, -1, -1);
         };
     }
 
