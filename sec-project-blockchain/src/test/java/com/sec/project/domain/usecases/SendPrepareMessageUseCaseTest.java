@@ -2,6 +2,7 @@ package com.sec.project.domain.usecases;
 
 import com.sec.project.domain.models.enums.SendingMethod;
 import com.sec.project.domain.models.records.Message;
+import com.sec.project.domain.usecases.consensus.SendPrepareMessageUseCase;
 import com.sec.project.utils.NetworkUtils;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;

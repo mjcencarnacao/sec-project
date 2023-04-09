@@ -21,6 +21,8 @@ import java.util.stream.Collectors;
 
 import static com.sec.project.infrastructure.configuration.StaticNodeConfiguration.getPublicKeysOfNodesFromFile;
 import static com.sec.project.infrastructure.configuration.StaticNodeConfiguration.ports;
+import static com.sec.project.infrastructure.repositories.ConsensusServiceImplementation.blockchainTransactions;
+import static com.sec.project.interfaces.CommandLineInterface.clientListener;
 import static com.sec.project.interfaces.CommandLineInterface.self;
 import static com.sec.project.utils.Constants.DEFAULT_TIMEOUT;
 import static com.sec.project.utils.Constants.MAX_BUFFER_SIZE;
@@ -158,6 +160,20 @@ public class NetworkUtils<T> {
                 throw new RuntimeException(e);
             }
         });
+    }
+
+    public void enqueueClientRequests() {
+        while (true) {
+            try {
+                byte[] buffer = new byte[MAX_BUFFER_SIZE];
+                DatagramPacket dataReceived = new DatagramPacket(buffer, buffer.length);
+                clientListener.receive(dataReceived);
+                MessageTransferObject message = gson.fromJson(new String(buffer).trim(), MessageTransferObject.class);
+                blockchainTransactions.clientRequests().add(new ImmutablePair<>(dataReceived.getPort(), message));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
 }

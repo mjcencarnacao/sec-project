@@ -2,6 +2,7 @@ package com.sec.project.domain.usecases;
 
 import com.sec.project.domain.models.enums.SendingMethod;
 import com.sec.project.domain.models.records.Message;
+import com.sec.project.domain.usecases.consensus.SendCommitMessageUseCase;
 import com.sec.project.utils.NetworkUtils;
 import org.aspectj.lang.annotation.Before;
 import org.junit.jupiter.api.Test;
