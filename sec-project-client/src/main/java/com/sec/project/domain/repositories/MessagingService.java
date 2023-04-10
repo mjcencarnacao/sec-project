@@ -1,6 +1,6 @@
 package com.sec.project.domain.repositories;
 
-import com.sec.project.domain.models.Message;
+import com.sec.project.models.records.Message;
 
 /**
  * Contract for the MessagingServiceImplementation where the message exchange will take place.

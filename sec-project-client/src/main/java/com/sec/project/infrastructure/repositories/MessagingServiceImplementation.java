@@ -1,7 +1,7 @@
 package com.sec.project.infrastructure.repositories;
 
-import com.sec.project.domain.models.Message;
 import com.sec.project.domain.repositories.MessagingService;
+import com.sec.project.models.records.Message;
 import com.sec.project.utils.NetworkUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -2,8 +2,8 @@ package com.sec.project.domain.models.valueobjects;
 
 import com.sec.project.domain.models.enums.Mode;
 import com.sec.project.domain.models.enums.Role;
-import com.sec.project.domain.models.records.Connection;
-import com.sec.project.domain.models.records.Message;
+import com.sec.project.models.records.Connection;
+import com.sec.project.models.records.Message;
 
 import java.net.SocketException;
 import java.net.UnknownHostException;

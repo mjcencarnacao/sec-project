@@ -1,6 +1,6 @@
 package com.sec.project.domain.repositories;
 
-import com.sec.project.domain.models.records.Message;
+import com.sec.project.models.records.Message;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;

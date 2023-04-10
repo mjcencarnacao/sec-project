@@ -1,10 +1,10 @@
 package com.sec.project.utils;
 
 import com.google.gson.Gson;
-import com.sec.project.domain.models.Connection;
-import com.sec.project.domain.models.MessageTransferObject;
-import com.sec.project.infrastructure.configuration.SecurityConfiguration;
-import com.sec.project.infrastructure.configuration.StaticNodeConfiguration;
+import com.sec.project.configuration.SecurityConfiguration;
+import com.sec.project.configuration.StaticNodeConfiguration;
+import com.sec.project.models.records.Connection;
+import com.sec.project.models.records.MessageTransferObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -13,7 +13,7 @@ import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.sec.project.infrastructure.configuration.StaticNodeConfiguration.getPublicKeysOfNodesFromFile;
+import static com.sec.project.configuration.StaticNodeConfiguration.getPublicKeysFromFile;
 import static com.sec.project.utils.Constants.MAX_BUFFER_SIZE;
 
 /**
@@ -26,23 +26,13 @@ import static com.sec.project.utils.Constants.MAX_BUFFER_SIZE;
 public class NetworkUtils<T> {
 
     private final Gson gson;
-    public static final Connection connection;
-
-    static {
-        try {
-            connection = new Connection();
-        } catch (UnknownHostException e) {
-            throw new RuntimeException(e);
-        } catch (SocketException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
+    public static Connection connection = null;
     private final SecurityConfiguration securityConfiguration;
 
     @Autowired
-    public NetworkUtils(Gson gson, SecurityConfiguration securityConfiguration) {
+    public NetworkUtils(Gson gson, SecurityConfiguration securityConfiguration) throws SocketException, UnknownHostException {
         this.gson = gson;
+        connection = new Connection();
         this.securityConfiguration = securityConfiguration;
     }
 
@@ -70,7 +60,7 @@ public class NetworkUtils<T> {
             DatagramPacket dataReceived = new DatagramPacket(buffer, buffer.length);
             connection.datagramSocket().receive(dataReceived);
             MessageTransferObject message = gson.fromJson(new String(buffer).trim(), MessageTransferObject.class);
-            if (getPublicKeysOfNodesFromFile().get(dataReceived.getPort()) != null && securityConfiguration.verifySignature(getPublicKeysOfNodesFromFile().get(dataReceived.getPort()), message.data(), message.signature()))
+            if (getPublicKeysFromFile(false).get(dataReceived.getPort()) != null && securityConfiguration.verifySignature(getPublicKeysFromFile(false).get(dataReceived.getPort()), message.data(), message.signature()))
                 return gson.fromJson(new String(message.data()).trim(), objectClass);
             return gson.fromJson(new String(message.data()).trim(), objectClass);
         } catch (IOException e) {

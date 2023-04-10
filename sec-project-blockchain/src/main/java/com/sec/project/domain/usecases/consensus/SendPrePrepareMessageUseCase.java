@@ -1,8 +1,8 @@
 package com.sec.project.domain.usecases.consensus;
 
-import com.sec.project.domain.models.enums.SendingMethod;
-import com.sec.project.domain.models.records.Message;
 import com.sec.project.domain.usecases.UseCase;
+import com.sec.project.models.enums.SendingMethod;
+import com.sec.project.models.records.Message;
 import com.sec.project.utils.NetworkUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

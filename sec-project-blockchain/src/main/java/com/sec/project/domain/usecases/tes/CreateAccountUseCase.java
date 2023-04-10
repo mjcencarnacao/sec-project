@@ -1,8 +1,8 @@
 package com.sec.project.domain.usecases.tes;
 
-import com.sec.project.domain.models.records.Message;
 import com.sec.project.domain.repositories.TokenExchangeSystemService;
 import com.sec.project.domain.usecases.UseCase;
+import com.sec.project.models.records.Message;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +14,7 @@ public class CreateAccountUseCase implements UseCase {
     private final TokenExchangeSystemService tokenExchangeSystemService;
 
     @Autowired
-    public CreateAccountUseCase(TokenExchangeSystemService tokenExchangeSystemService){
+    public CreateAccountUseCase(TokenExchangeSystemService tokenExchangeSystemService) {
         this.tokenExchangeSystemService = tokenExchangeSystemService;
     }
 

@@ -1,17 +1,17 @@
 package com.sec.project.infrastructure.repositories;
 
 import com.google.gson.Gson;
-import com.sec.project.domain.models.enums.SendingMethod;
+import com.sec.project.configuration.SecurityConfiguration;
 import com.sec.project.domain.models.records.Block;
-import com.sec.project.domain.models.records.Message;
-import com.sec.project.domain.models.records.MessageTransferObject;
 import com.sec.project.domain.models.records.Queue;
 import com.sec.project.domain.repositories.ConsensusService;
 import com.sec.project.domain.usecases.UseCaseCollection;
 import com.sec.project.domain.usecases.consensus.SendCommitMessageUseCase;
 import com.sec.project.domain.usecases.consensus.SendPrePrepareMessageUseCase;
 import com.sec.project.domain.usecases.consensus.SendPrepareMessageUseCase;
-import com.sec.project.infrastructure.configuration.SecurityConfiguration;
+import com.sec.project.models.enums.SendingMethod;
+import com.sec.project.models.records.Message;
+import com.sec.project.models.records.MessageTransferObject;
 import com.sec.project.utils.NetworkUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
@@ -21,8 +21,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
-import static com.sec.project.domain.models.enums.MessageType.*;
-import static com.sec.project.infrastructure.configuration.StaticNodeConfiguration.LEADER_PORT;
+import static com.sec.project.configuration.StaticNodeConfiguration.LEADER_PORT;
+import static com.sec.project.models.enums.MessageType.*;
 import static com.sec.project.utils.Constants.MINIMUM_TRANSACTIONS;
 
 /**

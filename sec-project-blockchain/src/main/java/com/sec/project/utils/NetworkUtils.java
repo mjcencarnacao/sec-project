@@ -1,10 +1,10 @@
 package com.sec.project.utils;
 
 import com.google.gson.Gson;
-import com.sec.project.domain.models.enums.SendingMethod;
-import com.sec.project.domain.models.records.MessageTransferObject;
-import com.sec.project.infrastructure.configuration.SecurityConfiguration;
-import com.sec.project.infrastructure.configuration.StaticNodeConfiguration;
+import com.sec.project.configuration.SecurityConfiguration;
+import com.sec.project.configuration.StaticNodeConfiguration;
+import com.sec.project.models.enums.SendingMethod;
+import com.sec.project.models.records.MessageTransferObject;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,8 +19,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static com.sec.project.infrastructure.configuration.StaticNodeConfiguration.getPublicKeysOfNodesFromFile;
-import static com.sec.project.infrastructure.configuration.StaticNodeConfiguration.ports;
+import static com.sec.project.configuration.StaticNodeConfiguration.getPublicKeysFromFile;
+import static com.sec.project.configuration.StaticNodeConfiguration.ports;
 import static com.sec.project.infrastructure.repositories.ConsensusServiceImplementation.blockchainTransactions;
 import static com.sec.project.interfaces.CommandLineInterface.clientListener;
 import static com.sec.project.interfaces.CommandLineInterface.self;
@@ -60,7 +60,7 @@ public class NetworkUtils<T> {
         byte[] message = gson.toJson(new MessageTransferObject(objectBytes, securityConfiguration.signMessage(objectBytes))).getBytes();
         switch (sendingMethod) {
             case UNICAST -> receiver.ifPresent(integer -> createPacketForDelivery(message, integer));
-            case BROADCAST -> StaticNodeConfiguration.ports.forEach(port -> createPacketForDelivery(message, port));
+            case BROADCAST -> ports.forEach(port -> createPacketForDelivery(message, port));
             default -> throw new IllegalArgumentException(String.format("Unknown value %s", sendingMethod.name()));
         }
     }
@@ -79,7 +79,7 @@ public class NetworkUtils<T> {
             socket.receive(dataReceived);
             packetRecordQueue.remove(dataReceived.getPort());
             MessageTransferObject message = gson.fromJson(new String(buffer).trim(), MessageTransferObject.class);
-            if (getPublicKeysOfNodesFromFile().get(dataReceived.getPort()) != null && securityConfiguration.verifySignature(getPublicKeysOfNodesFromFile().get(dataReceived.getPort()), message.data(), message.signature()))
+            if (getPublicKeysFromFile(false).get(dataReceived.getPort()) != null && securityConfiguration.verifySignature(getPublicKeysFromFile(false).get(dataReceived.getPort()), message.data(), message.signature()))
                 return new ImmutablePair<>(dataReceived.getPort(), message);
             return new ImmutablePair<>(dataReceived.getPort(), message);
         } catch (Exception e) {
@@ -97,7 +97,7 @@ public class NetworkUtils<T> {
         List<T> responses = new ArrayList<>();
         new Thread(this::waitForAcknowledges).start();
         AtomicReference<T> nonByzantineMessage = new AtomicReference<>();
-        while (responses.size() != StaticNodeConfiguration.ports.size())
+        while (responses.size() != ports.size())
             responses.add(gson.fromJson(new String(receiveResponse().right.data()).trim(), objectClass));
         responses.forEach(message -> {
             if (securityConfiguration.generateMessageDigest(gson.toJson(message).getBytes()).equals(hasQuorumOfValidMessages(responses)))

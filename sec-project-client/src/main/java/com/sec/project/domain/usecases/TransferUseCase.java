@@ -1,11 +1,11 @@
 package com.sec.project.domain.usecases;
 
-import com.sec.project.domain.models.Message;
 import com.sec.project.domain.repositories.MessagingService;
+import com.sec.project.models.records.Message;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import static com.sec.project.domain.enums.MessageType.TRANSFER;
+import static com.sec.project.models.enums.MessageType.TRANSFER;
 import static com.sec.project.utils.NetworkUtils.connection;
 
 /**
@@ -24,7 +24,7 @@ public class TransferUseCase {
     }
 
     public void execute(int destination, int amount) {
-        Message transferMessage = new Message(TRANSFER, amount, connection.datagramSocket().getLocalPort(), destination);
+        Message transferMessage = new Message(TRANSFER, -1, -1, String.valueOf(amount), connection.datagramSocket().getLocalPort(), destination);
         messagingService.sendMessage(transferMessage);
     }
 

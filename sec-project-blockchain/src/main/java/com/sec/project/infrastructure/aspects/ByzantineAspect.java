@@ -1,8 +1,8 @@
 package com.sec.project.infrastructure.aspects;
 
-import com.sec.project.domain.models.enums.SendingMethod;
-import com.sec.project.domain.models.records.Message;
 import com.sec.project.infrastructure.annotations.Byzantine;
+import com.sec.project.models.enums.SendingMethod;
+import com.sec.project.models.records.Message;
 import com.sec.project.utils.NetworkUtils;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;

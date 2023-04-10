@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import java.security.PublicKey;
 import java.util.HashMap;
 
-import static com.sec.project.infrastructure.configuration.StaticNodeConfiguration.getPublicKeysOfClientFromFile;
+import static com.sec.project.configuration.StaticNodeConfiguration.getPublicKeysFromFile;
 
 @Service
 public class TokenExchangeSystemServiceImplementation implements TokenExchangeSystemService {
@@ -23,7 +23,7 @@ public class TokenExchangeSystemServiceImplementation implements TokenExchangeSy
 
     @Override
     public void createAccount(int publicKey) {
-        accountRecord.put(getPublicKeysOfClientFromFile().get(publicKey), 100);
+        accountRecord.put(getPublicKeysFromFile(true).get(publicKey), 100);
         logger.info("Created Account for: " + publicKey);
     }
 
