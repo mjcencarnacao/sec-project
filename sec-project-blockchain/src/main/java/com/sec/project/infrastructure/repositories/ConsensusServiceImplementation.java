@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 import static com.sec.project.configuration.StaticNodeConfiguration.LEADER_PORT;
+import static com.sec.project.configuration.StaticNodeConfiguration.getPublicKeysFromFile;
 import static com.sec.project.models.enums.MessageType.*;
 import static com.sec.project.utils.Constants.MINIMUM_TRANSACTIONS;
 
@@ -66,7 +67,10 @@ public class ConsensusServiceImplementation implements ConsensusService {
                     ImmutablePair<Integer, MessageTransferObject> responseObject = blockchainTransactions.clientRequests().get(0);
                     Message response = gson.fromJson(new String(responseObject.right.data()).trim(), Message.class);
                     clientPort = responseObject.left;
-                    handleMessageTypes(response);
+                    if (getPublicKeysFromFile(true).get(response.source()) != null && securityConfiguration.verifySignature(getPublicKeysFromFile(true).get(response.source()), responseObject.right.data(), responseObject.right.signature()))
+                        handleMessageTypes(response);
+                    else
+                        blockchainTransactions.clientRequests().remove(0);
                 }
             }
         }

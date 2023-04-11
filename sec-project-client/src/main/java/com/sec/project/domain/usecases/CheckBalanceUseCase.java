@@ -1,6 +1,7 @@
 package com.sec.project.domain.usecases;
 
 import com.sec.project.domain.repositories.MessagingService;
+import com.sec.project.models.enums.ReadType;
 import com.sec.project.models.records.Message;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,10 +23,10 @@ public class CheckBalanceUseCase {
         this.messagingService = messagingService;
     }
 
-    public void execute(int destination) {
+    public void execute(int destination, ReadType readType) {
         Message balanceRequest = new Message(CHECK_BALANCE, -1, -1, String.valueOf(-1), destination, -1);
-        messagingService.sendMessage(balanceRequest);
-        messagingService.receiveResponse();
+        messagingService.sendMessage(balanceRequest, readType);
+        messagingService.receiveResponse(readType != ReadType.STRONGLY_CONSISTENT_READ);
     }
 
 }

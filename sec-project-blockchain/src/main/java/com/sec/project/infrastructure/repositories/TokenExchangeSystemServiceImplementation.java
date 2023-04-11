@@ -29,9 +29,11 @@ public class TokenExchangeSystemServiceImplementation implements TokenExchangeSy
 
     @Override
     public void transfer(PublicKey source, PublicKey destination, int amount) {
-        accountRecord.put(source, accountRecord.get(source) - amount);
-        accountRecord.put(destination, accountRecord.get(destination) + amount);
-        logger.info("Transfer performed with value: " + amount);
+        if (accountRecord.get(source) - amount >= 0) {
+            accountRecord.put(source, accountRecord.get(source) - amount);
+            accountRecord.put(destination, accountRecord.get(destination) + amount);
+            logger.info("Transfer performed with value: " + amount);
+        }
     }
 
 }

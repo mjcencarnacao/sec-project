@@ -1,6 +1,7 @@
 package com.sec.project.domain.usecases;
 
 import com.sec.project.domain.repositories.MessagingService;
+import com.sec.project.models.enums.ReadType;
 import com.sec.project.models.records.Message;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -25,7 +26,7 @@ public class CreateAccountUseCase {
 
     public void execute() {
         Message creationRequest = new Message(CREATE_ACCOUNT, -1, -1, String.valueOf(0), connection.datagramSocket().getLocalPort(), -1);
-        messagingService.sendMessage(creationRequest);
+        messagingService.sendMessage(creationRequest, ReadType.STRONGLY_CONSISTENT_READ);
     }
 
 }

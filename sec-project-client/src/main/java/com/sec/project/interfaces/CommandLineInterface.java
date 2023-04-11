@@ -2,6 +2,7 @@ package com.sec.project.interfaces;
 
 import com.sec.project.configuration.SecurityConfiguration;
 import com.sec.project.domain.usecases.UseCaseCollection;
+import com.sec.project.models.enums.ReadType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.shell.standard.ShellComponent;
 import org.springframework.shell.standard.ShellMethod;
@@ -49,8 +50,8 @@ public class CommandLineInterface {
      * @param amount     to transfer for a given operation.
      */
     @ShellMethod("Transfer to an Account.")
-    public void transfer(int identifier, int amount) {
-        useCaseCollection.transferUseCase().execute(identifier, amount);
+    public void transfer(int source, int identifier, int amount) {
+        useCaseCollection.transferUseCase().execute(source, identifier, amount);
     }
 
     /**
@@ -60,8 +61,8 @@ public class CommandLineInterface {
      * @param port for the account to check the balance.
      */
     @ShellMethod(key = "check_balance", value = "Check balance of an Account.")
-    public void checkBalance(int port) {
-        useCaseCollection.checkBalanceUseCase().execute(port);
+    public void checkBalance(int port, ReadType readType) {
+        useCaseCollection.checkBalanceUseCase().execute(port, readType);
     }
 
     /**

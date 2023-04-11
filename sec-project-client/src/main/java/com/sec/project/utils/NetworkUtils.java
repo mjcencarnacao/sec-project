@@ -3,6 +3,7 @@ package com.sec.project.utils;
 import com.google.gson.Gson;
 import com.sec.project.configuration.SecurityConfiguration;
 import com.sec.project.configuration.StaticNodeConfiguration;
+import com.sec.project.models.enums.ReadType;
 import com.sec.project.models.records.Connection;
 import com.sec.project.models.records.MessageTransferObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,8 +13,10 @@ import java.io.IOException;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import static com.sec.project.configuration.StaticNodeConfiguration.getPublicKeysFromFile;
+import static com.sec.project.configuration.StaticNodeConfiguration.ports;
 import static com.sec.project.utils.Constants.MAX_BUFFER_SIZE;
 
 /**
@@ -42,10 +45,13 @@ public class NetworkUtils<T> {
      * @param object generic object to be sent to every node on the blockchain. This is parsed as JSON and recovered to the
      *               original object on the remote side.
      */
-    public void sendMessage(T object) {
+    public void sendMessage(T object, ReadType readType) {
         byte[] bytes = gson.toJson(object).getBytes();
         MessageTransferObject message = new MessageTransferObject(bytes, securityConfiguration.signMessage(bytes));
-        StaticNodeConfiguration.ports.forEach(port -> deliverPacket(gson.toJson(message).getBytes(), port + 1000));
+        if (readType == ReadType.STRONGLY_CONSISTENT_READ)
+            StaticNodeConfiguration.ports.forEach(port -> deliverPacket(gson.toJson(message).getBytes(), port + 1000));
+        else
+            deliverPacket(gson.toJson(message).getBytes(), ports.get(new Random().nextInt(4)) + 1000);
     }
 
     /**
