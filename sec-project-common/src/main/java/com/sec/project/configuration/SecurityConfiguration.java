@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.*;
 import java.util.Base64;
 
@@ -70,6 +71,7 @@ public class SecurityConfiguration {
     public void writePublicKeyToFile(int port, boolean isClient) {
         String path = isClient ? CLIENT_KEY_STORAGE : BLOCKCHAIN_KEY_STORAGE;
         try {
+            Files.createDirectories(Paths.get(path));
             new File(path + port + ".pem").createNewFile();
             Files.write(Path.of(path + port + ".pem"), getPublicKey().getEncoded());
         } catch (IOException e) {
