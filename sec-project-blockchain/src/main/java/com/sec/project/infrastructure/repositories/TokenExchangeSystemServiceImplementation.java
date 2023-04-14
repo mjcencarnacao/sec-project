@@ -29,6 +29,8 @@ public class TokenExchangeSystemServiceImplementation implements TokenExchangeSy
     @Override
     public void createSnapshot(List<byte[]> signatures) {
         HashMap<Integer, Integer> snapshot = new HashMap<>();
+        PublicKey leaderKey = getPublicKeysFromFile(true).get(LEADER_PORT);
+        snapshot.put(LEADER_PORT, accountRecord.get(leaderKey));
         getAllPublicKeysIntegersFromFile().forEach((integer, publicKey) -> {
                     if (accountRecord.containsKey(publicKey))
                         snapshot.put(integer, accountRecord.get(publicKey));
