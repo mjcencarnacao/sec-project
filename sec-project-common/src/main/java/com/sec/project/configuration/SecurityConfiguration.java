@@ -104,6 +104,8 @@ public class SecurityConfiguration {
      * @return boolean checking if a signature is valid or not.
      */
     public boolean verifySignature(PublicKey key, byte[] data, byte[] receivedSignature) {
+        if (data == null || key == null || receivedSignature == null)
+            return false;
         try {
             signature.initVerify(key);
             signature.update(data);

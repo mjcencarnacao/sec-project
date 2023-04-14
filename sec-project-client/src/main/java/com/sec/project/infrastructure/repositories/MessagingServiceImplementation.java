@@ -55,15 +55,26 @@ public class MessagingServiceImplementation implements MessagingService {
         if (unicast) {
             Message message = networkUtils.receiveResponse(Message.class);
             Snapshot snapshot = new Gson().fromJson(message.value(), Snapshot.class);
-            AtomicInteger atomicInteger = new AtomicInteger(0);
-            snapshot.signatures().forEach(signature -> getPublicKeysFromFile(false).forEach((k, v) -> {
-                if (securityConfiguration.verifySignature(v, lastReceived, signature))
-                    atomicInteger.incrementAndGet();
-            }));
-            if (atomicInteger.get() >= getQuorum())
-                logger.info("Received Stale Response from the Blockchain. Operation Successful. Value: " + snapshot.accounts().get(message.source()) + "OR: " + snapshot.accounts().get(message.destination()));
+            if (isSnapshotValid(snapshot))
+                logger.info("Received Stale Response from the Blockchain. Operation Successful. Value: " + snapshot.accounts().get(message.source()));
         } else
             logger.info("Received Response from the Blockchain. Operation Successful. Value: " + networkUtils.receiveQuorumResponse(Message.class).value());
+    }
+
+    /**
+     * Checks signatures of the messages sent by the blockchain nodes.
+     * Used to verify if a snapshot is considered valid and not altered by a Byzantine node.
+     *
+     * @param snapshot to evaluate.
+     * @return boolean whether a snapshot is valid or not
+     */
+    private boolean isSnapshotValid(Snapshot snapshot) {
+        AtomicInteger atomicInteger = new AtomicInteger(0);
+        snapshot.signatures().forEach(signature -> getPublicKeysFromFile(false).forEach((port, publicKey) -> {
+            if (securityConfiguration.verifySignature(publicKey, lastReceived, signature))
+                atomicInteger.incrementAndGet();
+        }));
+        return atomicInteger.get() >= getQuorum();
     }
 
 }
