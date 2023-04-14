@@ -1,1 +1,3 @@
 rootProject.name = 'sec-project-blockchain'
+include ':sec-project-common'
+project(':sec-project-common').projectDir = new File('../sec-project-common')

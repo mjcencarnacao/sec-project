@@ -1,20 +1,27 @@
 package com.sec.project.utils;
 
 import com.google.gson.Gson;
-import com.sec.project.domain.models.Connection;
-import com.sec.project.domain.models.MessageTransferObject;
-import com.sec.project.infrastructure.configuration.SecurityConfiguration;
-import com.sec.project.infrastructure.configuration.StaticNodeConfiguration;
+import com.sec.project.configuration.SecurityConfiguration;
+import com.sec.project.configuration.StaticNodeConfiguration;
+import com.sec.project.models.enums.ReadType;
+import com.sec.project.models.records.Connection;
+import com.sec.project.models.records.MessageTransferObject;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import static com.sec.project.configuration.StaticNodeConfiguration.getPublicKeysFromFile;
+import static com.sec.project.configuration.StaticNodeConfiguration.ports;
 import static com.sec.project.utils.Constants.MAX_BUFFER_SIZE;
 
 /**
@@ -27,13 +34,14 @@ import static com.sec.project.utils.Constants.MAX_BUFFER_SIZE;
 public class NetworkUtils<T> {
 
     private final Gson gson;
-    private final Connection connection;
-    private final SecurityConfiguration<byte[]> securityConfiguration;
+    public static byte[] lastReceived = null;
+    public static Connection connection = null;
+    private final SecurityConfiguration securityConfiguration;
 
     @Autowired
-    public NetworkUtils(Gson gson, Connection connection, SecurityConfiguration<byte[]> securityConfiguration) {
+    public NetworkUtils(Gson gson, SecurityConfiguration securityConfiguration) throws SocketException, UnknownHostException {
         this.gson = gson;
-        this.connection = connection;
+        connection = new Connection();
         this.securityConfiguration = securityConfiguration;
     }
 
@@ -43,10 +51,13 @@ public class NetworkUtils<T> {
      * @param object generic object to be sent to every node on the blockchain. This is parsed as JSON and recovered to the
      *               original object on the remote side.
      */
-    public void sendMessage(T object) {
+    public void sendMessage(T object, ReadType readType) {
         byte[] bytes = gson.toJson(object).getBytes();
         MessageTransferObject message = new MessageTransferObject(bytes, securityConfiguration.signMessage(bytes));
-        StaticNodeConfiguration.ports.forEach(port -> deliverPacket(gson.toJson(message).getBytes(), port));
+        if (readType == ReadType.STRONGLY_CONSISTENT_READ)
+            StaticNodeConfiguration.ports.forEach(port -> deliverPacket(gson.toJson(message).getBytes(), port + 1000));
+        else
+            deliverPacket(gson.toJson(message).getBytes(), ports.get(new Random().nextInt(4)) + 1000);
     }
 
     /**
@@ -60,8 +71,10 @@ public class NetworkUtils<T> {
         try {
             DatagramPacket dataReceived = new DatagramPacket(buffer, buffer.length);
             connection.datagramSocket().receive(dataReceived);
-            MessageTransferObject response = gson.fromJson(new String(buffer).trim(), MessageTransferObject.class);
-            return gson.fromJson(new String(response.data()).trim(), objectClass);
+            MessageTransferObject message = gson.fromJson(new String(buffer).trim(), MessageTransferObject.class);
+            if (getPublicKeysFromFile(false).get(dataReceived.getPort()) != null && securityConfiguration.verifySignature(getPublicKeysFromFile(false).get(dataReceived.getPort()), message.data(), message.signature()))
+                return gson.fromJson(new String(message.data()).trim(), objectClass);
+            return null;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -75,10 +88,30 @@ public class NetworkUtils<T> {
      */
     public T receiveQuorumResponse(Class<T> objectClass) {
         List<T> responses = new ArrayList<>();
-        while (responses.size() != StaticNodeConfiguration.getQuorum())
+        AtomicReference<T> nonByzantineMessage = new AtomicReference<>();
+        while (responses.size() != ports.size())
             responses.add(receiveResponse(objectClass));
-        return responses.get(0);
+        responses.forEach(message -> {
+            if (securityConfiguration.generateMessageDigest(gson.toJson(message).getBytes()).equals(hasQuorumOfValidMessages(responses)))
+                nonByzantineMessage.set(message);
+        });
+        return nonByzantineMessage.get();
     }
+
+    /**
+     * Returns the hash of the valid messages in the Quorum.
+     *
+     * @param messages list
+     * @return valid hash
+     */
+    private String hasQuorumOfValidMessages(List<T> messages) {
+        List<String> hashes = new ArrayList<>();
+        AtomicReference<ImmutablePair<String, Long>> predominantHash = new AtomicReference<>();
+        messages.forEach(response -> hashes.add(securityConfiguration.generateMessageDigest(gson.toJson(response).getBytes())));
+        hashes.stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting())).entrySet().stream().max(Map.Entry.comparingByValue()).ifPresent(max -> predominantHash.set(new ImmutablePair<>(max.getKey(), max.getValue())));
+        return predominantHash.get().right >= StaticNodeConfiguration.getQuorum() ? predominantHash.get().left : null;
+    }
+
 
     /**
      * Method that handles logic to send a datagram packet via UDP. Needed for broadcasting messages.
