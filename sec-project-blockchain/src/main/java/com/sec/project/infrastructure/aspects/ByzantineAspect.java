@@ -1,8 +1,8 @@
 package com.sec.project.infrastructure.aspects;
 
-import com.sec.project.domain.models.enums.SendingMethod;
-import com.sec.project.domain.models.records.Message;
 import com.sec.project.infrastructure.annotations.Byzantine;
+import com.sec.project.models.enums.SendingMethod;
+import com.sec.project.models.records.Message;
 import com.sec.project.utils.NetworkUtils;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -43,7 +43,7 @@ public class ByzantineAspect {
     @Around("@annotation(com.sec.project.infrastructure.annotations.Byzantine) && args(message)")
     public Object execute(ProceedingJoinPoint join, Message message) throws Throwable {
         if (self.getMode().isByzantine()) {
-            networkUtils.sendMessage(self.craftByzantineMessage(message), SendingMethod.BROADCAST, Optional.empty(), true);
+            networkUtils.sendMessage(self.craftByzantineMessage(message), SendingMethod.BROADCAST, Optional.empty());
             logger.info("Node sent Byzantine message.");
             return null;
         }
