@@ -24,7 +24,7 @@ public class TransferUseCase {
     }
 
     public void execute(int source, int destination, int amount) {
-        Message transferMessage = new Message(TRANSFER, -1, -1, String.valueOf(amount), source, destination);
+        Message transferMessage = new Message(TRANSFER, null, -1, -1, String.valueOf(amount), source, destination);
         messagingService.sendMessage(transferMessage, ReadType.STRONGLY_CONSISTENT_READ);
     }
 

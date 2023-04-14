@@ -3,8 +3,10 @@ package com.sec.project.utils;
 import com.google.gson.Gson;
 import com.sec.project.configuration.SecurityConfiguration;
 import com.sec.project.configuration.StaticNodeConfiguration;
+import com.sec.project.models.enums.MessageType;
 import com.sec.project.models.enums.ReadType;
 import com.sec.project.models.records.Connection;
+import com.sec.project.models.records.Message;
 import com.sec.project.models.records.MessageTransferObject;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +35,7 @@ import static com.sec.project.utils.Constants.MAX_BUFFER_SIZE;
 @Component
 public class NetworkUtils<T> {
 
+    public static byte[] lastReceived = null;
     private final Gson gson;
     public static Connection connection = null;
     private final SecurityConfiguration securityConfiguration;
@@ -70,6 +73,7 @@ public class NetworkUtils<T> {
         try {
             DatagramPacket dataReceived = new DatagramPacket(buffer, buffer.length);
             connection.datagramSocket().receive(dataReceived);
+            System.out.println(new String(buffer).trim());
             MessageTransferObject message = gson.fromJson(new String(buffer).trim(), MessageTransferObject.class);
             if (getPublicKeysFromFile(false).get(dataReceived.getPort()) != null && securityConfiguration.verifySignature(getPublicKeysFromFile(false).get(dataReceived.getPort()), message.data(), message.signature()))
                 return gson.fromJson(new String(message.data()).trim(), objectClass);
@@ -124,6 +128,22 @@ public class NetworkUtils<T> {
             socket.send(new DatagramPacket(bytes, bytes.length, InetAddress.getLocalHost(), port));
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public void enqueueClientRequests() {
+        while (true) {
+            try {
+                byte[] buffer = new byte[MAX_BUFFER_SIZE];
+                DatagramPacket dataReceived = new DatagramPacket(buffer, buffer.length);
+                connection.datagramSocket().receive(dataReceived);
+                MessageTransferObject message = gson.fromJson(new String(buffer).trim(), MessageTransferObject.class);
+                Message message1 = gson.fromJson(new String(message.data()).trim(), Message.class);
+                if (message1.type() == MessageType.COMMIT)
+                    lastReceived = message.data();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 }

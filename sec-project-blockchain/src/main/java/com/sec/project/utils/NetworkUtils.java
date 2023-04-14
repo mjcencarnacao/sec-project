@@ -93,17 +93,20 @@ public class NetworkUtils<T> {
      * @param objectClass required to allow the recovery of the original object type.
      * @return the Object, of which the class is passed as an argument.
      */
-    public T receiveQuorumResponse(Class<T> objectClass) {
-        List<T> responses = new ArrayList<>();
+    public ImmutablePair<T, List<byte[]>> receiveQuorumResponse(Class<T> objectClass) {
+        ImmutablePair<List<T>, List<byte[]>> responseSignature = new ImmutablePair<>(new LinkedList<>(), new LinkedList<>());
         new Thread(this::waitForAcknowledges).start();
         AtomicReference<T> nonByzantineMessage = new AtomicReference<>();
-        while (responses.size() != ports.size())
-            responses.add(gson.fromJson(new String(receiveResponse().right.data()).trim(), objectClass));
-        responses.forEach(message -> {
-            if (securityConfiguration.generateMessageDigest(gson.toJson(message).getBytes()).equals(hasQuorumOfValidMessages(responses)))
+        while (responseSignature.left.size() != ports.size()) {
+            ImmutablePair<Integer, MessageTransferObject> response = receiveResponse();
+            responseSignature.right.add(response.right.signature());
+            responseSignature.left.add(gson.fromJson(new String(response.right.data()).trim(), objectClass));
+        }
+        responseSignature.left.forEach(message -> {
+            if (securityConfiguration.generateMessageDigest(gson.toJson(message).getBytes()).equals(hasQuorumOfValidMessages(responseSignature.left)))
                 nonByzantineMessage.set(message);
         });
-        return nonByzantineMessage.get();
+        return new ImmutablePair<>(nonByzantineMessage.get(), responseSignature.right);
     }
 
     /**
@@ -142,10 +145,8 @@ public class NetworkUtils<T> {
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
-                if (packetRecordQueue.isEmpty()) {
+                if (packetRecordQueue.isEmpty())
                     timer.cancel();
-                    System.out.println("STILL GOT THE NEXT PACKETS: " + packetRecordQueue.size());
-                }
                 resendPacketsFromRecordQueue();
             }
         };

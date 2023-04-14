@@ -26,7 +26,7 @@ public class CheckBalanceUseCase {
 
     @FlushUDPBuffer
     public void execute(int destination, ReadType readType) {
-        Message balanceRequest = new Message(CHECK_BALANCE, -1, -1, String.valueOf(-1), destination, -1);
+        Message balanceRequest = new Message(CHECK_BALANCE, readType, -1, -1, String.valueOf(-1), destination, -1);
         messagingService.sendMessage(balanceRequest, readType);
         messagingService.receiveResponse(readType != ReadType.STRONGLY_CONSISTENT_READ);
     }

@@ -64,6 +64,20 @@ public class StaticNodeConfiguration {
         return publicKeyHashMap;
     }
 
+    public static HashMap<Integer, PublicKey> getAllPublicKeysIntegersFromFile() {
+        HashMap<Integer, PublicKey> publicKeyHashMap = new HashMap<>();
+        Arrays.stream(Objects.requireNonNull(new File(ROOT_KEY_STORAGE).listFiles())).toList().forEach(
+                folder ->  Arrays.stream(folder.listFiles()).toList().forEach(file -> {
+                    try {
+                        publicKeyHashMap.put(Integer.parseInt(file.getName().split("\\.")[0]), bytesArrayToPublicKey(Files.readAllBytes(file.toPath())));
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+        ));
+        return publicKeyHashMap;
+    }
+
     /**
      * Conversion of a byte array to a public key object.
      *

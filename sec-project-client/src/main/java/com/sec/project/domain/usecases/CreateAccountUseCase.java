@@ -25,7 +25,7 @@ public class CreateAccountUseCase {
     }
 
     public void execute() {
-        Message creationRequest = new Message(CREATE_ACCOUNT, -1, -1, String.valueOf(0), connection.datagramSocket().getLocalPort(), -1);
+        Message creationRequest = new Message(CREATE_ACCOUNT, null,-1, -1, String.valueOf(0), connection.datagramSocket().getLocalPort(), -1);
         messagingService.sendMessage(creationRequest, ReadType.STRONGLY_CONSISTENT_READ);
     }
 

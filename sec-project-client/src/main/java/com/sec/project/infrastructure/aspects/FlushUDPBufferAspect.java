@@ -1,5 +1,6 @@
 package com.sec.project.infrastructure.aspects;
 
+import com.google.gson.Gson;
 import com.sec.project.infrastructure.annotations.FlushUDPBuffer;
 import com.sec.project.models.records.Message;
 import com.sec.project.utils.NetworkUtils;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import static com.sec.project.utils.Constants.DEFAULT_TIMEOUT;
 import static com.sec.project.utils.NetworkUtils.connection;
+import static com.sec.project.utils.NetworkUtils.lastReceived;
 
 @Aspect
 @Component
@@ -37,7 +39,8 @@ public class FlushUDPBufferAspect {
         try {
             while (connection.datagramSocket().getReceiveBufferSize() != 0) {
                 connection.datagramSocket().setSoTimeout(DEFAULT_TIMEOUT);
-                networkUtils.receiveResponse(Message.class);
+                Message message = networkUtils.receiveResponse(Message.class);
+                lastReceived = new Gson().toJson(message).getBytes();
             }
         } catch (Exception exception) {
             connection.datagramSocket().setSoTimeout(0);

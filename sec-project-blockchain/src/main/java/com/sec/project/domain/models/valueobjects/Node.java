@@ -103,11 +103,11 @@ public class Node {
         Action random = Action.values()[new Random().nextInt(Action.values().length)];
         return switch (random) {
             case CHANGE_ID ->
-                    new Message(message.type(), new Random().nextLong(), message.round(), message.value(), -1, -1);
+                    new Message(message.type(), message.readType(), new Random().nextLong(), message.round(), message.value(), -1, -1);
             case CHANGE_ROUND ->
-                    new Message(message.type(), message.id(), new Random().nextLong(), message.value(), -1, -1);
+                    new Message(message.type(), message.readType(), message.id(), new Random().nextLong(), message.value(), -1, -1);
             case CHANGE_VALUE ->
-                    new Message(message.type(), message.id(), message.round(), BYZANTINE_RANDOM_STRING, -1, -1);
+                    new Message(message.type(), message.readType(), message.id(), message.round(), BYZANTINE_RANDOM_STRING, -1, -1);
         };
     }
 
