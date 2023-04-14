@@ -30,7 +30,7 @@ public class Constants {
     /**
      * Round Timeout Value.
      */
-    public static final int DEFAULT_TIMEOUT = 5000;
+    public static final int DEFAULT_TIMEOUT = 15000;
 
     /**
      * Byzantine string.
