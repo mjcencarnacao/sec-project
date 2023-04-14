@@ -71,7 +71,7 @@ public class ConsensusServiceImplementation implements ConsensusService {
                     ImmutablePair<Integer, MessageTransferObject> responseObject = blockchainTransactions.clientRequests().get(0);
                     Message response = gson.fromJson(new String(responseObject.right.data()).trim(), Message.class);
                     clientPort = responseObject.left;
-                    if(response.type() == CHECK_BALANCE)
+                    if (response.type() == CHECK_BALANCE)
                         handleMessageTypes(response);
                     else if (getPublicKeysFromFile(true).get(response.source()) != null && securityConfiguration.verifySignature(getPublicKeysFromFile(true).get(response.source()), responseObject.right.data(), responseObject.right.signature()))
                         handleMessageTypes(response);
@@ -137,7 +137,7 @@ public class ConsensusServiceImplementation implements ConsensusService {
         round = 1;
         logger.info("Added new block to the blockchain with ID: " + blockchainTransactions.transactions().size());
         blockchainTransactions.transactions().add(gson.fromJson(message.value(), Block.class));
-        networkUtils.sendMessage(message, SendingMethod.UNICAST, Optional.of(clientPort));
+        getPublicKeysFromFile(true).forEach((port, publicKey) -> networkUtils.sendMessage(message, SendingMethod.UNICAST, Optional.of(port)));
         start(Optional.empty());
     }
 

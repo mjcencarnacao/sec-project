@@ -34,8 +34,6 @@ public class TokenExchangeSystemServiceImplementation implements TokenExchangeSy
                         snapshot.put(integer, accountRecord.get(publicKey));
                 }
         );
-        System.out.println(getAllPublicKeysIntegersFromFile());
-        System.out.println("CREATE SNAPSHOT: " + snapshot);
         this.currentSnapshot = new Snapshot(snapshot, signatures);
     }
 
@@ -54,14 +52,15 @@ public class TokenExchangeSystemServiceImplementation implements TokenExchangeSy
     public void transfer(PublicKey source, PublicKey destination, int amount) {
         PublicKey leaderKey = getPublicKeysFromFile(true).get(LEADER_PORT);
         if (!accountRecord.containsKey(leaderKey)) createAccount(LEADER_PORT);
+        exchangeBetweenAccounts(source, destination, amount);
+        exchangeBetweenAccounts(source, leaderKey, MINIMUM_TRANSACTION_FEE);
+        logger.info("Transfer performed with value: " + amount);
+    }
+
+    private void exchangeBetweenAccounts(PublicKey source, PublicKey destination, int amount) {
         if (accountRecord.get(source) - amount >= 0) {
             accountRecord.put(source, accountRecord.get(source) - amount);
             accountRecord.put(destination, accountRecord.get(destination) + amount);
-            accountRecord.put(source, accountRecord.get(source) - MINIMUM_TRANSACTION_FEE);
-            accountRecord.put(leaderKey, accountRecord.get(leaderKey) + MINIMUM_TRANSACTION_FEE);
-            logger.info("Transfer performed with value: " + amount);
         }
     }
-
-
 }

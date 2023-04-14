@@ -81,7 +81,7 @@ public class NetworkUtils<T> {
             MessageTransferObject message = gson.fromJson(new String(buffer).trim(), MessageTransferObject.class);
             if (getPublicKeysFromFile(false).get(dataReceived.getPort()) != null && securityConfiguration.verifySignature(getPublicKeysFromFile(false).get(dataReceived.getPort()), message.data(), message.signature()))
                 return new ImmutablePair<>(dataReceived.getPort(), message);
-            return new ImmutablePair<>(dataReceived.getPort(), message);
+            return null;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -178,5 +178,4 @@ public class NetworkUtils<T> {
             }
         }
     }
-
 }
