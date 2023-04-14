@@ -8,7 +8,9 @@ import org.springframework.stereotype.Service;
 import java.security.PublicKey;
 import java.util.HashMap;
 
+import static com.sec.project.configuration.StaticNodeConfiguration.LEADER_PORT;
 import static com.sec.project.configuration.StaticNodeConfiguration.getPublicKeysFromFile;
+import static com.sec.project.utils.Constants.MINIMUM_TRANSACTION_FEE;
 
 @Service
 public class TokenExchangeSystemServiceImplementation implements TokenExchangeSystemService {
@@ -29,9 +31,13 @@ public class TokenExchangeSystemServiceImplementation implements TokenExchangeSy
 
     @Override
     public void transfer(PublicKey source, PublicKey destination, int amount) {
+        PublicKey leaderKey = getPublicKeysFromFile(true).get(LEADER_PORT);
+        if(!accountRecord.containsKey(leaderKey)) createAccount(LEADER_PORT);
         if (accountRecord.get(source) - amount >= 0) {
             accountRecord.put(source, accountRecord.get(source) - amount);
             accountRecord.put(destination, accountRecord.get(destination) + amount);
+            accountRecord.put(source, accountRecord.get(source) - MINIMUM_TRANSACTION_FEE);
+            accountRecord.put(leaderKey, accountRecord.get(leaderKey) + MINIMUM_TRANSACTION_FEE);
             logger.info("Transfer performed with value: " + amount);
         }
     }

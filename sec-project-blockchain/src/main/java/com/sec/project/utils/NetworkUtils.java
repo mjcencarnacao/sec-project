@@ -142,8 +142,10 @@ public class NetworkUtils<T> {
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
-                if (packetRecordQueue.isEmpty())
+                if (packetRecordQueue.isEmpty()) {
                     timer.cancel();
+                    System.out.println("STILL GOT THE NEXT PACKETS: " + packetRecordQueue.size());
+                }
                 resendPacketsFromRecordQueue();
             }
         };

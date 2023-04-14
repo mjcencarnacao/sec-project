@@ -14,7 +14,12 @@ public class Constants {
     /**
      * Minimum Transactions per Block
      */
-    public static int MINIMUM_TRANSACTIONS = 10;
+    public static int MINIMUM_TRANSACTIONS = 5;
+
+    /**
+     * Minimum Transactions Fee.
+     */
+    public static int MINIMUM_TRANSACTION_FEE = 1;
 
     /**
      * MessagingServiceImplementation Constants

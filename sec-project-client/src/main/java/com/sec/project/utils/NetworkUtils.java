@@ -6,6 +6,7 @@ import com.sec.project.configuration.StaticNodeConfiguration;
 import com.sec.project.models.enums.ReadType;
 import com.sec.project.models.records.Connection;
 import com.sec.project.models.records.MessageTransferObject;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -13,7 +14,11 @@ import java.io.IOException;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.sec.project.configuration.StaticNodeConfiguration.getPublicKeysFromFile;
 import static com.sec.project.configuration.StaticNodeConfiguration.ports;
@@ -82,10 +87,30 @@ public class NetworkUtils<T> {
      */
     public T receiveQuorumResponse(Class<T> objectClass) {
         List<T> responses = new ArrayList<>();
-        while (responses.size() != StaticNodeConfiguration.getQuorum())
+        AtomicReference<T> nonByzantineMessage = new AtomicReference<>();
+        while (responses.size() != ports.size())
             responses.add(receiveResponse(objectClass));
-        return responses.get(0);
+        responses.forEach(message -> {
+            if (securityConfiguration.generateMessageDigest(gson.toJson(message).getBytes()).equals(hasQuorumOfValidMessages(responses)))
+                nonByzantineMessage.set(message);
+        });
+        return nonByzantineMessage.get();
     }
+
+    /**
+     * Returns the hash of the valid messages in the Quorum.
+     *
+     * @param messages list
+     * @return valid hash
+     */
+    private String hasQuorumOfValidMessages(List<T> messages) {
+        List<String> hashes = new ArrayList<>();
+        AtomicReference<ImmutablePair<String, Long>> predominantHash = new AtomicReference<>();
+        messages.forEach(response -> hashes.add(securityConfiguration.generateMessageDigest(gson.toJson(response).getBytes())));
+        hashes.stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting())).entrySet().stream().max(Map.Entry.comparingByValue()).ifPresent(max -> predominantHash.set(new ImmutablePair<>(max.getKey(), max.getValue())));
+        return predominantHash.get().right >= StaticNodeConfiguration.getQuorum() ? predominantHash.get().left : null;
+    }
+
 
     /**
      * Method that handles logic to send a datagram packet via UDP. Needed for broadcasting messages.
