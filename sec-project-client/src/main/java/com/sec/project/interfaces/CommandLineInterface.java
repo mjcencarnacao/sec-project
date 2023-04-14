@@ -51,7 +51,8 @@ public class CommandLineInterface {
      */
     @ShellMethod("Transfer to an Account.")
     public void transfer(int source, int identifier, int amount) {
-        useCaseCollection.transferUseCase().execute(source, identifier, amount);
+        if (amount > 0)
+            useCaseCollection.transferUseCase().execute(source, identifier, amount);
     }
 
     /**
