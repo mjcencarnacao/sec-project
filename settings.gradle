@@ -1,0 +1,6 @@
+rootProject.name = 'sec-project'
+include ':sec-project-common'
+include ':sec-project-client'
+include ':sec-project-blockchain'
+
+
